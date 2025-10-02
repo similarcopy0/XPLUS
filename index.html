@@ -45,7 +45,7 @@
       position: fixed; inset: 0 0 auto 0; height: var(--topbar-h);
       z-index: var(--z-topbar);
       display: flex; align-items: center; justify-content: space-between;
-      padding: 0 6px; background: linear-gradient(to bottom, rgba(0,0,0,0.55), rgba(0,0,0,0));
+      padding: 0 6px; background: transparent;
       backdrop-filter: blur(2px);
     }
     .topbar-left { display: flex; align-items: center; gap: 6px; }
@@ -65,18 +65,14 @@
     .icon-btn:active { transform: scale(0.96); opacity: 0.85; }
 
     /* Live stats (under Explore, but inside topbar) */
-    .live-container {
-      position: fixed; top: calc(var(--topbar-h) + 0px); left: 0; right: 0; height: var(--live-h);
-      display: flex; align-items: center; justify-content: center; gap: 6px;
-      padding: 0 10px; color: #000; background: transparent; pointer-events: none;
-    }
-    .live-inner { pointer-events: auto; background: transparent; color:#000; border-radius: 999px; height: 100%; padding: 0 10px; display: inline-flex; align-items: center; gap: 6px; }
-    .live-icon { font-size: calc(var(--live-h) * 0.7); margin-right: 5px; }
-    .live-text { font-weight: 700; color: #000; font-size: calc(var(--live-h) * 0.45); }
-    .live-divider { margin: 0 6px; color: #000; opacity: 0.8; }
+    .live-container { height: var(--live-h); padding: 3px; display: inline-flex; align-items: center; justify-content: center; background-color: transparent; color: #000; }
+    .live-inner { background: transparent; color:#000; border-radius: 999px; height: 100%; padding: 0 8px; display: inline-flex; align-items: center; gap: 6px; }
+    .live-icon { font-size: calc(var(--live-h) * 0.7); margin-right: 5px; color: #000; }
+    .live-text { font-weight: 700; color: #000; font-size: 12px; }
+    .live-divider { margin: 0 5px; color: #000; opacity: 0.8; font-size: 12px; }
 
     /* Search bar overlay */
-    .search-wrap { position: fixed; top: calc(var(--topbar-h) + var(--live-h) + 4px); left: 0; right: 0; display: none; z-index: var(--z-topbar); }
+    .search-wrap { position: fixed; top: calc(var(--topbar-h) + 4px); left: 0; right: 0; display: none; z-index: var(--z-topbar); }
     .search-inner { margin: 0 auto; max-width: 70%; padding: 0 12px; }
     .search-bar { width: 100%; display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.12); border-radius: 20px; box-shadow: var(--shadow); overflow: hidden; }
     .search-input { flex: 1; border: 0; background: transparent; color: #fff; padding: 6px 10px; height: var(--live-h); font-size: 13px; outline: none; }
@@ -88,20 +84,20 @@
     main#app { position: relative; width: 100%; height: 100vh; overflow: hidden; }
 
     /* For You feed */
-    .feed { position: absolute; inset: 0; top: calc(var(--topbar-h) + var(--live-h)); height: calc(100vh - var(--topbar-h) - var(--live-h)); overflow-y: auto; scroll-snap-type: y mandatory; scroll-padding-top: 0; }
+    .feed { position: absolute; inset: 0; top: var(--topbar-h); height: calc(100vh - var(--topbar-h)); overflow-y: auto; scroll-snap-type: y mandatory; scroll-padding-top: 0; }
     .feed.hidden { display: none; }
     .scroller { display: grid; gap: var(--snap-gap); }
-    .video-card { position: relative; width: 100%; height: calc(100vh - var(--topbar-h) - var(--live-h)); scroll-snap-align: start; overflow: hidden; background: #000; }
+    .video-card { position: relative; width: 100%; height: calc(100vh - var(--topbar-h)); scroll-snap-align: start; overflow: hidden; background: #000; }
     .video-card video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #000; }
 
     /* Tap to toggle UI */
     .ui-hidden header.topbar, .ui-hidden .live-container, .ui-hidden .search-wrap, .ui-hidden .action-bar, .ui-hidden .meta-overlay, .ui-hidden .progress-bar { opacity: 0; pointer-events: none; transition: opacity .2s ease; }
 
     /* Right vertical action bar */
-    .action-bar { position: absolute; right: 8px; bottom: 16vh; display: flex; flex-direction: column; align-items: flex-end; gap: 14px; z-index: var(--z-actions); }
-    .action { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: rgba(255,255,255,0.9); background: transparent; border: 0; }
-    .action .ico { font-size: var(--icon-size-sm); line-height: 1; }
-    .action .count { font-size: 12px; color: rgba(230,238,242,0.95); }
+    .action-bar { position: absolute; right: 8px; bottom: 16vh; display: flex; flex-direction: column; align-items: flex-end; gap: 18px; z-index: var(--z-actions); }
+    .action { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: rgba(255,255,255,0.9); background: transparent; border: 0; }
+    .action .ico { font-size: 16px; line-height: 1; }
+    .action .count { font-size: 14px; color: rgba(230,238,242,0.95); }
     .action:active { transform: scale(1.15); }
 
     /* Bottom-left meta overlay */
@@ -118,7 +114,7 @@
     .progress-bar.show { opacity: 1; }
 
     /* Grid sections (Explore, Favorites, History, Trending, New) */
-    .grid-section { position: absolute; inset: 0; top: calc(var(--topbar-h) + var(--live-h)); height: calc(100vh - var(--topbar-h) - var(--live-h)); overflow-y: auto; padding: 8px 6px 20vh; display: none; }
+    .grid-section { position: absolute; inset: 0; top: var(--topbar-h); height: calc(100vh - var(--topbar-h)); overflow-y: auto; padding: 8px 6px 20vh; display: none; }
     .grid-section.active { display: block; }
     .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
     .card { position: relative; background: #111; border-radius: 8px; overflow: hidden; }
@@ -178,21 +174,20 @@
         <button class="tab active" data-tab="forYou" id="tabForYou" role="tab" aria-selected="true">For you</button>
         <button class="tab" data-tab="explore" id="tabExplore" role="tab" aria-selected="false">Explore</button>
       </div>
+      <div class="live-container" aria-live="polite">
+        <div class="live-inner" id="liveStats">
+          <span class="live-icon">👁️‍🗨️</span>
+          <span class="live-text view-count" id="liveViews">0</span>
+          <span class="live-divider">|</span>
+          <span class="live-text video-count" id="liveVideos">0</span>
+        </div>
+      </div>
     </div>
     <div class="topbar-right">
       <button class="icon-btn" id="btnSearch" aria-label="Search">🔍</button>
       <a class="icon-btn" id="btnProfile" href="go:INTMTHB" aria-label="Profile">💃</a>
     </div>
   </header>
-
-  <div class="live-container" aria-live="polite">
-    <div class="live-inner" id="liveStats">
-      <span class="live-icon">👁️‍🗨️</span>
-      <span class="live-text" id="liveViews">0</span>
-      <span class="live-divider">|</span>
-      <span class="live-text" id="liveVideos">0</span>
-    </div>
-  </div>
 
   <div class="search-wrap" id="searchWrap">
     <div class="search-inner">
@@ -356,8 +351,6 @@
       async getCounts(videoId) { return jsonp('getCounts', { videoId }); },
       async increment(videoId, metric, amount=1) { return jsonp('increment', { videoId, metric, amount, userId }); },
       async liveStats() { return jsonp('liveStats'); },
-      async getComments(videoId, sort='newest') { return jsonp('getComments', { videoId, sort }); },
-      async postComment(videoId, user, text) { return jsonp('postComment', { videoId, user, text }); },
       async search(q) { return jsonp('search', { q }); }
     };
 
@@ -375,7 +368,7 @@
         <div class="action-bar" aria-label="Actions">
           <button class="action like" data-metric="likes" aria-label="Like"><span class="ico">👍🏻</span><span class="count" data-k="likes">${formatCount(v.likes)}</span></button>
           <button class="action dislike" data-metric="dislikes" aria-label="Dislike"><span class="ico">👎🏻</span><span class="count" data-k="dislikes">${formatCount(v.dislikes)}</span></button>
-          <button class="action comments" data-action="comments" aria-label="Comments"><span class="ico">💬</span><span class="count" data-k="commentsCount">${formatCount(v.commentsCount)}</span></button>
+          
           <button class="action share" data-action="share" aria-label="Share"><span class="ico">♻️</span><span class="count" data-k="shares">${formatCount(v.shares)}</span></button>
           <button class="action favorite" data-metric="favorites" aria-label="Favorite"><span class="ico">♥</span><span class="count" data-k="favorites">${formatCount(v.favorites)}</span></button>
           <button class="action save" data-action="save" aria-label="Save"><span class="ico">💾</span></button>
@@ -424,8 +417,6 @@
           const act = btn.dataset.action;
           if (metric) {
             onIncrement(v.id, metric, btn, card);
-          } else if (act === 'comments') {
-            openComments(v);
           } else if (act === 'share') {
             openShare(v);
             onIncrement(v.id, 'shares');
@@ -547,71 +538,25 @@
 
     /* Live stats */
     async function updateLiveStats() {
-      const r = await API.liveStats();
-      if (r && r.ok && r.data) {
-        document.getElementById('liveViews').textContent = formatCount(r.data.totalViews || 0);
-        document.getElementById('liveVideos').textContent = formatCount(r.data.totalVideos || 0);
-      }
+      try {
+        const resp = await fetch(SHEET_PUBLIC_CSV, { cache: 'no-store' });
+        const csv = await resp.text();
+        const lines = csv.split(/\r?\n/).filter(Boolean);
+        const headers = lines.shift().split(',');
+        const idIdx = headers.findIndex(h=>/^(id|ID)$/i.test(h.trim()));
+        const viewsIdx = headers.findIndex(h=>/^views$/i.test(h.trim()));
+        let totalViews = 0; let totalVideos = 0;
+        for (const line of lines) {
+          const cols = line.split(',');
+          if (cols[idIdx] && cols[idIdx].trim()) totalVideos++;
+          const v = Number(cols[viewsIdx]||0); if (!isNaN(v)) totalViews += v;
+        }
+        document.getElementById('liveViews').textContent = formatCount(totalViews);
+        document.getElementById('liveVideos').textContent = formatCount(totalVideos);
+      } catch (e) { /* silent */ }
     }
 
-    /* Comments */
-    const commentsDrawer = document.getElementById('commentsDrawer');
-    const commentsList = document.getElementById('commentsList');
-    const commentsTitle = document.getElementById('commentsTitle');
-    const commentInput = document.getElementById('commentInput');
-    const commentSend = document.getElementById('commentSend');
-
-    async function openComments(video) {
-      currentCommentsVideoId = video.id;
-      commentsTitle.textContent = `Comments • ${video.title || video.id}`;
-      await loadComments();
-      commentsDrawer.classList.add('open'); commentsDrawer.setAttribute('aria-hidden', 'false');
-      // Focus composer
-      document.getElementById('composer').classList.add('show');
-      setTimeout(()=>commentInput.focus(), 150);
-    }
-    function closeComments() {
-      commentsDrawer.classList.remove('open'); commentsDrawer.setAttribute('aria-hidden', 'true');
-      document.getElementById('composer').classList.remove('show');
-    }
-    document.addEventListener('keydown', (e)=>{ if (e.key==='Escape') closeComments(); });
-    commentsDrawer.addEventListener('click', (e)=>{ if (e.target === commentsDrawer) closeComments(); });
-
-    async function loadComments() {
-      if (!currentCommentsVideoId) return;
-      const r = await API.getComments(currentCommentsVideoId, commentsSortMode);
-      commentsList.innerHTML = '';
-      const items = (r && r.ok && Array.isArray(r.data)) ? r.data : [];
-      items.forEach(c => {
-        const div = document.createElement('div'); div.className = 'comment-item';
-        div.innerHTML = `<div class="comment-meta">${c.user || 'Anon'} • ${new Date(c.timestamp || Date.now()).toLocaleString()}</div><div class="comment-text"></div>`;
-        div.querySelector('.comment-text').textContent = c.comments || '';
-        commentsList.appendChild(div);
-      });
-    }
-
-    document.querySelectorAll('.drawer-tab').forEach(btn => {
-      btn.addEventListener('click', async ()=>{
-        document.querySelectorAll('.drawer-tab').forEach(b=>b.classList.remove('active'));
-        btn.classList.add('active'); commentsSortMode = btn.dataset.sort || 'newest';
-        await loadComments();
-      });
-    });
-
-    commentSend.addEventListener('click', async ()=>{
-      const txt = (commentInput.value||'').trim(); if (!txt || !currentCommentsVideoId) return;
-      // optimistic
-      const temp = { user: 'You', comments: txt, timestamp: Date.now() };
-      const div = document.createElement('div'); div.className = 'comment-item';
-      div.innerHTML = `<div class="comment-meta">${temp.user} • ${new Date(temp.timestamp).toLocaleString()}</div><div class="comment-text"></div>`;
-      div.querySelector('.comment-text').textContent = temp.comments; commentsList.prepend(div);
-      commentInput.value = '';
-      const r = await API.postComment(currentCommentsVideoId, userId, txt);
-      if (!(r && r.ok)) toast('Failed to post comment');
-      // refresh counts on active card
-      const activeCard = document.querySelector(`.video-card[data-id="${currentCommentsVideoId}"]`);
-      if (activeCard) refreshCounts(currentCommentsVideoId, activeCard);
-    });
+    /* Comments removed per spec */
 
     /* Share popup */
     const sharePopup = document.getElementById('sharePopup');
