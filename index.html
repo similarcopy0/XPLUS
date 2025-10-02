@@ -65,11 +65,11 @@
     .icon-btn:active { transform: scale(0.96); opacity: 0.85; }
 
     /* Live stats (under Explore, but inside topbar) */
-    .live-container { height: var(--live-h); padding: 3px; display: inline-flex; align-items: center; justify-content: center; background-color: transparent; color: #000; }
-    .live-inner { background: transparent; color:#000; border-radius: 999px; height: 100%; padding: 0 8px; display: inline-flex; align-items: center; gap: 6px; }
-    .live-icon { font-size: calc(var(--live-h) * 0.7); margin-right: 5px; color: #000; }
-    .live-text { font-weight: 700; color: #000; font-size: 12px; }
-    .live-divider { margin: 0 5px; color: #000; opacity: 0.8; font-size: 12px; }
+    .live-container { padding: 4px 0; display: inline-flex; align-items: center; justify-content: center; background-color: transparent; }
+    .live-inner { background: transparent; color:#fff; border-radius: 999px; height: 100%; padding: 0 8px; display: inline-flex; align-items: center; gap: 6px; }
+    .live-icon { font-size: 12px; margin-right: 4px; color: #fff; }
+    .live-text { font-weight: 700; color: #fff; font-size: 12px; }
+    .live-divider { margin: 0 4px; color: #fff; opacity: 0.9; font-size: 12px; }
 
     /* Search bar overlay */
     .search-wrap { position: fixed; top: calc(var(--topbar-h) + 4px); left: 0; right: 0; display: none; z-index: var(--z-topbar); }
@@ -268,7 +268,7 @@
   <script>
     /* Config */
     const SHEET_PUBLIC_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQjWd9DazL9QlO3oCtD703oJIOBEsa0D4FwbJIqjnjBQ3s_i4nsdyKS8fTjZRWpSMwhIBLPYLl8kz_n/pub?output=csv';
-    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby4sHkU-I0fhpTqaqc0aIRAP5q4dZCeEefFNoYWqnM91bVBSS4tk0wnJgc6pTbXOGt1xQ/exec';
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxqj6ig2xbit8WwebVnpMMTELP7mjNJHbHwaHgvmvHatM8UyL_xka_Z_Nhz5lOsMlvWPQ/exec';
 
     /* State */
     let allVideos = []; // raw data from API
@@ -470,13 +470,18 @@
         const el = (card||document).querySelector(`[data-k="${metric}"]`);
         if (el) el.textContent = formatCount(data[metric]);
         if (metric === 'likes' && card) {
-          // toggle visual
           const ico = card.querySelector('.action.like .ico');
-          if (ico) ico.style.color = 'var(--heart-like)';
+          if (ico) ico.textContent = '👍';
+          if (ico) ico.style.color = '#FFD54F';
         }
         if (metric === 'favorites' && card) {
           const ico = card.querySelector('.action.favorite .ico');
           if (ico) ico.textContent = '💚';
+        }
+        if (metric === 'dislikes' && card) {
+          const ico = card.querySelector('.action.dislike .ico');
+          if (ico) ico.textContent = '👎';
+          if (ico) ico.style.color = '#FFD54F';
         }
       }
     }
@@ -585,7 +590,7 @@
     function getLocalSet(key) { try { return new Set(JSON.parse(localStorage.getItem(key) || '[]')); } catch(e) { return new Set(); } }
     function saveLocalSet(key, set) { localStorage.setItem(key, JSON.stringify(Array.from(set))); }
     function addHistory(id) { const s = getLocalSet(localKeys.history); s.add(id); saveLocalSet(localKeys.history, s); }
-    function saveVideo(id) { const s = getLocalSet(localKeys.saves); if (!s.has(id)) { s.add(id); saveLocalSet(localKeys.saves, s); toast('Saved'); } else { toast('Already saved'); } }
+    function saveVideo(id) { const s = getLocalSet(localKeys.saves); const fav = getLocalSet(localKeys.favorites); let msg = 'Already saved'; if (!s.has(id)) { s.add(id); msg = 'Saved'; } if (!fav.has(id)) { fav.add(id); msg = 'Saved to Favorites'; } saveLocalSet(localKeys.saves, s); saveLocalSet(localKeys.favorites, fav); toast(msg); }
     function addFavorite(id) { const s = getLocalSet(localKeys.favorites); if (!s.has(id)) { s.add(id); saveLocalSet(localKeys.favorites, s); toast('Added to favorites'); } }
 
     /* Grids */
