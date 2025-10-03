@@ -65,11 +65,11 @@
     .icon-btn:active { transform: scale(0.96); opacity: 0.85; }
 
     /* Live stats (under Explore, but inside topbar) */
-    .live-container { padding: 4px 0; display: inline-flex; align-items: center; justify-content: center; background-color: transparent; }
-    .live-inner { background: transparent; color:#fff; border-radius: 999px; height: 100%; padding: 0 8px; display: inline-flex; align-items: center; gap: 6px; }
-    .live-icon { font-size: 12px; margin-right: 4px; color: #fff; }
-    .live-text { font-weight: 700; color: #fff; font-size: 12px; }
-    .live-divider { margin: 0 4px; color: #fff; opacity: 0.9; font-size: 12px; }
+    .live-container { padding: 2px 0; display: inline-flex; align-items: center; justify-content: center; background-color: transparent; }
+    .live-inner { background: transparent; color:#fff; border-radius: 999px; height: 100%; padding: 0 0; display: inline-flex; align-items: center; gap: 0; }
+    .live-icon { font-size: 11px; margin-right: 0; color: #fff; }
+    .live-text { font-weight: 700; color: #fff; font-size: 11px; }
+    .live-divider { margin: 0 0; color: #fff; opacity: 0.9; font-size: 11px; }
 
     /* Search bar overlay */
     .search-wrap { position: fixed; top: calc(var(--topbar-h) + 4px); left: 0; right: 0; display: none; z-index: var(--z-topbar); }
@@ -84,10 +84,10 @@
     main#app { position: relative; width: 100%; height: 100vh; overflow: hidden; }
 
     /* For You feed */
-    .feed { position: absolute; inset: 0; top: var(--topbar-h); height: calc(100vh - var(--topbar-h)); overflow-y: auto; scroll-snap-type: y mandatory; scroll-padding-top: 0; }
+    .feed { position: absolute; inset: 0; top: 0; height: 100vh; overflow-y: auto; scroll-snap-type: y mandatory; scroll-padding-top: 0; }
     .feed.hidden { display: none; }
     .scroller { display: grid; gap: var(--snap-gap); }
-    .video-card { position: relative; width: 100%; height: calc(100vh - var(--topbar-h)); scroll-snap-align: start; overflow: hidden; background: #000; }
+    .video-card { position: relative; width: 100%; height: 100vh; scroll-snap-align: start; overflow: hidden; background: #000; }
     .video-card video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #000; }
 
     /* Tap to toggle UI */
@@ -268,7 +268,7 @@
   <script>
     /* Config */
     const SHEET_PUBLIC_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQjWd9DazL9QlO3oCtD703oJIOBEsa0D4FwbJIqjnjBQ3s_i4nsdyKS8fTjZRWpSMwhIBLPYLl8kz_n/pub?output=csv';
-    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxqj6ig2xbit8WwebVnpMMTELP7mjNJHbHwaHgvmvHatM8UyL_xka_Z_Nhz5lOsMlvWPQ/exec';
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwfShYUusrkthQ2z3-YoYcAYTtUmXdZtORgRtf-N0LO9MC64ydy9di3hyiboNO-YDs6fg/exec';
 
     /* State */
     let allVideos = []; // raw data from API
@@ -364,19 +364,16 @@
       card.className = 'video-card';
       card.dataset.id = v.id;
       card.innerHTML = `
-        <video playsinline webkit-playsinline loop preload="metadata"></video>
+          <video playsinline webkit-playsinline loop preload="metadata" controlslist="nodownload"></video>
         <div class="action-bar" aria-label="Actions">
           <button class="action like" data-metric="likes" aria-label="Like"><span class="ico">👍🏻</span><span class="count" data-k="likes">${formatCount(v.likes)}</span></button>
           <button class="action dislike" data-metric="dislikes" aria-label="Dislike"><span class="ico">👎🏻</span><span class="count" data-k="dislikes">${formatCount(v.dislikes)}</span></button>
           
           <button class="action share" data-action="share" aria-label="Share"><span class="ico">♻️</span><span class="count" data-k="shares">${formatCount(v.shares)}</span></button>
           <button class="action favorite" data-metric="favorites" aria-label="Favorite"><span class="ico">♥</span><span class="count" data-k="favorites">${formatCount(v.favorites)}</span></button>
-          <button class="action save" data-action="save" aria-label="Save"><span class="ico">💾</span></button>
-          <button class="action history" data-action="history" aria-label="Watched History"><span class="ico">🕒</span></button>
-          <button class="action favlist" data-action="favlist" aria-label="Favorites List"><span class="ico">🌟</span></button>
+          
           <button class="action profile" data-action="profile" aria-label="❌ˢʰᵒᵗᶻ🫦 Profile"><span class="ico">❌</span></button>
           <button class="action trending" data-action="trending" aria-label="Trending"><span class="ico">🔥</span></button>
-          <button class="action new" data-action="new" aria-label="New"><span class="ico">🆕</span></button>
           <button class="action views" data-action="views" aria-label="Views"><span class="ico">👁️</span><span class="count" data-k="views">${formatCount(v.views)}</span></button>
         </div>
         <div class="meta-overlay">
@@ -420,18 +417,10 @@
           } else if (act === 'share') {
             openShare(v);
             onIncrement(v.id, 'shares');
-          } else if (act === 'save') {
-            saveVideo(v.id);
-          } else if (act === 'history') {
-            showGrid('historyList');
-          } else if (act === 'favlist') {
-            showGrid('favoritesList');
           } else if (act === 'profile') {
             openProfile();
           } else if (act === 'trending') {
-            showGrid('trendingList');
-          } else if (act === 'new') {
-            showGrid('newList');
+            openExplore();
           }
         });
       });
@@ -616,7 +605,7 @@
         const playable = ensureGithubPlayable(v.videoUrl || '');
         const card = document.createElement('div'); card.className = 'card';
         card.innerHTML = `
-          <video playsinline muted autoplay loop preload="metadata" src="${playable}"></video>
+          <video playsinline muted autoplay loop preload="metadata" controlslist="nodownload" src="${playable}"></video>
           <div class="card-overlay">
             <span class="mini"><span>👁️</span><span>${formatCount(v.views)}</span></span>
             <span class="mini"><span>👍</span><span>${formatCount(v.likes)}</span></span>
@@ -624,6 +613,13 @@
             <span class="mini"><span>❤</span><span>${formatCount(v.favorites)}</span></span>
           </div>
         `;
+        // Tap to play/pause
+        const vid = card.querySelector('video');
+        card.addEventListener('click', ()=>{
+          try {
+            if (vid.paused) { vid.play().catch(()=>{}); } else { vid.pause(); }
+          } catch(e){}
+        });
         targetEl.appendChild(card);
       });
     }
