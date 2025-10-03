@@ -65,18 +65,18 @@
     .icon-btn:active { transform: scale(0.96); opacity: 0.85; }
 
     /* Live stats (under Explore, but inside topbar) */
-    .live-container { padding: 2px 0; display: inline-flex; align-items: center; justify-content: center; background-color: transparent; }
-    .live-inner { background: transparent; color:#fff; border-radius: 999px; height: 100%; padding: 0 0; display: inline-flex; align-items: center; gap: 0; }
-    .live-icon { font-size: 11px; margin-right: 0; color: #fff; }
-    .live-text { font-weight: 700; color: #fff; font-size: 11px; }
-    .live-divider { margin: 0 0; color: #fff; opacity: 0.9; font-size: 11px; }
+    .live-container { padding: 3px 0; display: inline-flex; align-items: center; justify-content: center; background-color: transparent; }
+    .live-inner { background: transparent; color:#fff; border-radius: 999px; height: 100%; padding: 0; display: inline-flex; align-items: center; gap: 0; }
+    .live-icon { font-size: 12px; margin-right: 0; color: #fff; }
+    .live-text { font-weight: 700; color: #fff; font-size: 12px; }
+    .live-divider { margin: 0; color: #fff; opacity: 0.9; font-size: 12px; }
 
     /* Search bar overlay */
     .search-wrap { position: fixed; top: calc(var(--topbar-h) + 4px); left: 0; right: 0; display: none; z-index: var(--z-topbar); }
-    .search-inner { margin: 0 auto; max-width: 70%; padding: 0 12px; }
-    .search-bar { width: 100%; display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.12); border-radius: 20px; box-shadow: var(--shadow); overflow: hidden; }
+    .search-inner { margin: 0 auto; max-width: 80%; padding: 0 10px; }
+    .search-bar { width: 100%; display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.12); border-radius: 10px; box-shadow: var(--shadow); overflow: hidden; backdrop-filter: blur(6px); }
     .search-input { flex: 1; border: 0; background: transparent; color: #fff; padding: 6px 10px; height: var(--live-h); font-size: 13px; outline: none; }
-    .search-btn { background: var(--accent-2); color: #fff; border: 0; padding: 4px 10px; border-radius: 8px; font-weight: 600; height: 26px; }
+    .search-btn { background: var(--accent-2); color: #fff; border: 0; padding: 4px 12px; border-radius: 8px; font-weight: 600; height: 26px; white-space: nowrap; }
     .search-suggestions { margin-top: 6px; display: none; gap: 6px; flex-wrap: wrap; }
     .suggestion { font-size: 12px; color: #fff; background: var(--pill); padding: 4px 8px; border-radius: 999px; }
 
@@ -96,6 +96,8 @@
     /* Right vertical action bar */
     .action-bar { position: absolute; right: 8px; bottom: 16vh; display: flex; flex-direction: column; align-items: flex-end; gap: 18px; z-index: var(--z-actions); }
     .action { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: rgba(255,255,255,0.9); background: transparent; border: 0; }
+    .action-item { flex-direction: column; align-items: center; gap: 0; }
+    .action-item .count { margin-top: 4px; }
     .action .ico { font-size: 16px; line-height: 1; }
     .action .count { font-size: 14px; color: rgba(230,238,242,0.95); }
     .action:active { transform: scale(1.15); }
@@ -366,15 +368,15 @@
       card.innerHTML = `
           <video playsinline webkit-playsinline loop preload="metadata" controlslist="nodownload"></video>
         <div class="action-bar" aria-label="Actions">
-          <button class="action like" data-metric="likes" aria-label="Like"><span class="ico">👍🏻</span><span class="count" data-k="likes">${formatCount(v.likes)}</span></button>
-          <button class="action dislike" data-metric="dislikes" aria-label="Dislike"><span class="ico">👎🏻</span><span class="count" data-k="dislikes">${formatCount(v.dislikes)}</span></button>
+          <button class="action action-item like" data-metric="likes" aria-label="Like"><span class="ico">👍🏻</span><span class="count" data-k="likes">${formatCount(v.likes)}</span></button>
+          <button class="action action-item dislike" data-metric="dislikes" aria-label="Dislike"><span class="ico">👎🏻</span><span class="count" data-k="dislikes">${formatCount(v.dislikes)}</span></button>
           
-          <button class="action share" data-action="share" aria-label="Share"><span class="ico">♻️</span><span class="count" data-k="shares">${formatCount(v.shares)}</span></button>
-          <button class="action favorite" data-metric="favorites" aria-label="Favorite"><span class="ico">♥</span><span class="count" data-k="favorites">${formatCount(v.favorites)}</span></button>
+          <button class="action action-item share" data-action="share" aria-label="Share"><span class="ico">♻️</span><span class="count" data-k="shares">${formatCount(v.shares)}</span></button>
+          <button class="action action-item favorite" data-metric="favorites" aria-label="Favorite"><span class="ico">♥</span><span class="count" data-k="favorites">${formatCount(v.favorites)}</span></button>
           
-          <button class="action profile" data-action="profile" aria-label="❌ˢʰᵒᵗᶻ🫦 Profile"><span class="ico">❌</span></button>
-          <button class="action trending" data-action="trending" aria-label="Trending"><span class="ico">🔥</span></button>
-          <button class="action views" data-action="views" aria-label="Views"><span class="ico">👁️</span><span class="count" data-k="views">${formatCount(v.views)}</span></button>
+          <button class="action action-item profile" data-action="profile" aria-label="❌ˢʰᵒᵗᶻ🫦 Profile"><span class="ico">❌</span><span class="count"></span></button>
+          <button class="action action-item trending" data-action="trending" aria-label="Trending"><span class="ico">🔥</span><span class="count"></span></button>
+          <button class="action action-item views" data-action="views" aria-label="Views"><span class="ico">👁️</span><span class="count" data-k="views">${formatCount(v.views)}</span></button>
         </div>
         <div class="meta-overlay">
           <div class="profile-name">❌ˢʰᵒᵗᶻ🫦</div>
@@ -613,12 +615,15 @@
             <span class="mini"><span>❤</span><span>${formatCount(v.favorites)}</span></span>
           </div>
         `;
-        // Tap to play/pause
+        // Tap-to-play with fullscreen into Feed
         const vid = card.querySelector('video');
         card.addEventListener('click', ()=>{
-          try {
-            if (vid.paused) { vid.play().catch(()=>{}); } else { vid.pause(); }
-          } catch(e){}
+          try { if (vid.paused) { vid.play().catch(()=>{}); } } catch(e){}
+          // Navigate user to the main feed fullscreen experience
+          showFeed();
+          // Attempt to request fullscreen on the feed's active video if available
+          const active = document.querySelector('.video-card video');
+          if (active) { try { active.requestFullscreen && active.requestFullscreen(); } catch(e){} }
         });
         targetEl.appendChild(card);
       });
