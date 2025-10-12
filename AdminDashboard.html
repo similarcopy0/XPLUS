@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin Dashboard — x.plus.bd</title>
+  <style>
+    :root{--bg:#06101F;--panel:#0C1630;--panel-2:#0B1226;--border:#1C2750;--text:#EAF0FF;--muted:#9CB1E0;--accent:#00E5FF;--accent-2:#7C4DFF;--good:#00E676;--bad:#FF5252}
+    html,body{background:radial-gradient(1000px 600px at 80% -10%, #152048 0%, #0A0F1F 45%, #06101F 100%) fixed;margin:0;color:var(--text);font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto}
+    .container{max-width:1100px;margin:18px auto;padding:0 14px}
+    .grid{display:grid;gap:14px}
+    .cols-2{grid-template-columns:2fr 1fr}
+    @media (max-width:1000px){.cols-2{grid-template-columns:1fr}}
+    .card{background:linear-gradient(180deg,var(--panel) 0%,var(--panel-2) 100%);border:1px solid var(--border);border-radius:14px;padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    .title{font-weight:800;margin:0 0 10px}
+    .row{display:flex;gap:10px;margin:8px 0;align-items:center}
+    .input, textarea{width:100%;background:#0A142F;border:1px solid #1B2A55;border-radius:10px;color:#DDE5FF;padding:10px}
+    .btn{cursor:pointer;border:none;border-radius:10px;padding:10px 14px;font-weight:800;color:#081028;background:linear-gradient(90deg,var(--accent),var(--accent-2));box-shadow:0 8px 24px rgba(0,229,255,.2)}
+    .btn.secondary{background:#0E1A3E;color:#CFE2FF;border:1px solid #22336B}
+    .pill{display:inline-block;padding:4px 10px;border-radius:999px;background:#0B1534;border:1px solid #1E2D62;color:#C7D0F7;font-weight:700;font-size:12px}
+    table{width:100%;border-collapse:collapse}
+    th,td{border-bottom:1px solid #1B2A55;padding:8px 6px;text-align:left;color:#C9D4FF}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2 style="margin:10px 0 12px">Admin Dashboard</h2>
+    <div class="grid cols-2">
+      <div class="card">
+        <h3 class="title">🔔 Push Notification Center</h3>
+        <div class="row">
+          <label style="min-width:170px">Apps Script URL</label>
+          <input class="input" id="api" placeholder="https://script.google.com/macros/s/DEPLOYMENT_ID/exec" />
+        </div>
+        <div class="row">
+          <label style="min-width:170px">Secret Token</label>
+          <input class="input" id="tok" placeholder="YOUR_SECRET_KEY" />
+        </div>
+        <div class="row"><label style="min-width:170px">Target</label>
+          <select class="input" id="target">
+            <option value="all">All Users (Broadcast)</option>
+            <option value="single">Single User (Device Token)</option>
+          </select>
+        </div>
+        <div class="row" id="rowDevice" style="display:none">
+          <input class="input" id="device" placeholder="Device token" />
+        </div>
+        <div class="row"><input class="input" id="title" placeholder="Title" /></div>
+        <div class="row"><textarea id="message" rows="4" placeholder="Message"></textarea></div>
+        <div class="row">
+          <button class="btn" id="btnSend">Send Notification</button>
+          <button class="btn secondary" id="btnLoadSettings">Load Settings</button>
+          <button class="btn secondary" id="btnSaveSettings">Save Settings</button>
+          <span id="status" class="pill">Idle</span>
+        </div>
+      </div>
+      <div class="card">
+        <h3 class="title">🟢 Live Users (Today)</h3>
+        <table>
+          <thead><tr><th>User</th><th>Device</th><th>Location</th><th>Status</th><th>Active</th></tr></thead>
+          <tbody id="live"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const qs = (s)=>document.querySelector(s);
+
+    qs('#target').addEventListener('change', e => {
+      qs('#rowDevice').style.display = (e.target.value === 'single') ? 'flex' : 'none';
+    });
+
+    qs('#btnLoadSettings').addEventListener('click', () => {
+      const api = qs('#api').value.trim();
+      fetch(api+'?action=settings').then(r=>r.json()).then(j=>{
+        if (!j || !j.ok) return;
+        qs('#status').textContent = 'Settings loaded';
+      }).catch(()=>{ qs('#status').textContent = 'Failed to load'; });
+    });
+
+    qs('#btnSaveSettings').addEventListener('click', () => {
+      const api = qs('#api').value.trim();
+      const tok = qs('#tok').value.trim();
+      const body = { admin_action: 'set_settings', token: tok, auto_push_enabled: true, auto_push_hour: 23, auto_push_minute: 0, default_message: qs('#message').value.trim() || 'We missed you today!' };
+      fetch(api, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) })
+        .then(r=>r.json()).then(()=>{ qs('#status').textContent='Settings saved'; })
+        .catch(()=>{ qs('#status').textContent='Save failed'; });
+    });
+
+    qs('#btnSend').addEventListener('click', () => {
+      const api = qs('#api').value.trim();
+      const tok = qs('#tok').value.trim();
+      const title = qs('#title').value.trim();
+      const message = qs('#message').value.trim();
+      const target = qs('#target').value;
+      const body = { admin_action: target==='all' ? 'broadcast' : 'send', token: tok, title, message, device_token: qs('#device').value.trim() };
+      fetch(api, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) })
+        .then(r=>r.json()).then(j=>{ qs('#status').textContent = 'Sent'; })
+        .catch(()=>{ qs('#status').textContent = 'Failed'; });
+    });
+
+    function loadLive(){
+      const api = qs('#api').value.trim();
+      if (!api) return;
+      fetch(api+'?action=dashboard').then(r=>r.json()).then(j=>{
+        if (!j || !j.ok) return;
+        const data = j.data || [];
+        const tbody = qs('#live');
+        tbody.innerHTML = '';
+        const latestByUser = {};
+        data.forEach(r => { const uid = r.user_id; if (!latestByUser[uid] || (r.time_local||'') > (latestByUser[uid].time_local||'')) latestByUser[uid]=r; });
+        Object.values(latestByUser).sort((a,b)=>String(b.status_last_updated||'').localeCompare(String(a.status_last_updated||''))).forEach(r => {
+          const tr = document.createElement('tr');
+          const geo = r.geo_location_text || `${r.ip_city||''}${r.ip_city?', ':''}${r.ip_country||''}`;
+          tr.innerHTML = `<td>${r.user_name || 'Guest User'}</td><td>${r.device_name || ''}</td><td>${geo}</td><td>${r.status_online || ''}</td><td>${r.session_active_seconds || 0}s</td>`;
+          tbody.appendChild(tr);
+        });
+      }).catch(()=>{});
+    }
+
+    setInterval(loadLive, 30000);
+  </script>
+</body>
+</html>
