@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0f1f" />
+  <title>18+ Warning & Tracking | x.plus.bd</title>
+  <style>
+    :root{
+      --bg:#05070F;
+      --overlay:#000000CC;
+      --card:#0B1022CC;
+      --card-border:#171D3B;
+      --accent:#7C4DFF;
+      --accent-2:#00E5FF;
+      --success:#00E676;
+      --danger:#FF1744;
+      --text:#E6E9F2;
+      --muted:#99A3C2;
+      --warning:#FFEA00;
+      --pulse-a: rgba(124,77,255,0.35);
+      --pulse-b: rgba(0,229,255,0.25);
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius: 16px;
+    }
+    html,body{height:100%;background:radial-gradient(1200px 800px at 80% -10%, #10193C 0%, #070B16 45%, #05070F 100%) fixed;color:var(--text);margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,'Noto Sans',Helvetica,Arial,'Apple Color Emoji','Segoe UI Emoji';}
+    .overlay{
+      position:fixed;inset:0;background:linear-gradient(160deg, rgba(8,12,24,.9), rgba(0,0,0,.7)), var(--overlay);
+      display:flex;align-items:center;justify-content:center;z-index:9999;
+    }
+    .warning-card{width:min(680px,92vw);border-radius:var(--radius);background:linear-gradient(180deg, rgba(15,22,45,.85) 0%, rgba(6,9,20,.85) 100%);
+      border:1px solid var(--card-border);box-shadow:var(--shadow);
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      padding:20px 20px 24px; position:relative; overflow:hidden;
+    }
+    .warning-card::before{content:"";position:absolute;inset:-2px;z-index:0;background:conic-gradient(from 200deg, rgba(124,77,255,.25), rgba(0,229,255,.25), rgba(124,77,255,.25));filter:blur(24px);opacity:.35;}
+    .content{position:relative;z-index:1;}
+    .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+    .badge{font-size:12px;color:#0A0D18;background:linear-gradient(90deg,#00E5FF,#7C4DFF);padding:6px 10px;border-radius:999px;font-weight:700;letter-spacing:.3px;}
+    .countdown{position:absolute;right:14px;top:12px;background:rgba(10,15,30,.85);border:1px solid #1D2550;border-radius:12px;padding:6px 10px;display:flex;gap:8px;align-items:center;box-shadow:0 6px 18px rgba(0,0,0,.35)}
+    .count-number{font-weight:800;font-feature-settings:"tnum" on;}
+    .hero{display:grid;gap:16px;}
+    .image-wrap{display:flex;justify-content:center;}
+    .image-wrap img{width:100%;max-height:260px;object-fit:cover;border-radius:12px;border:1px solid #1B2142;box-shadow:0 10px 30px rgba(0,0,0,.45)}
+    .title{margin-top:4px;text-align:center}
+    .title h1{margin:4px 0 4px;font-size:18px;font-weight:800;letter-spacing:.2px}
+    .title p{margin:0;color:var(--muted);font-size:14px;line-height:1.4}
+    .actions{display:flex;flex-direction:column;align-items:center;gap:8px;margin-top:12px}
+    .btn-continue{cursor:pointer;border:none;outline:none;border-radius:12px;padding:14px 16px;width:min(380px,90%);
+      color:#0B0F1F;font-weight:900;letter-spacing:.3px;font-size:16px;
+      background:linear-gradient(90deg,#00E5FF 0%,#7C4DFF 50%, #00E5FF 100%);
+      background-size:200% 100%;transition:transform .2s ease, box-shadow .2s ease, background-position .6s ease;
+      box-shadow:0 10px 30px rgba(124,77,255,.35), 0 6px 12px rgba(0,229,255,.25);
+      position:relative;overflow:hidden;animation:pulse 1.8s infinite ease-in-out;
+    }
+    .btn-continue:hover{transform:translateY(-1px);background-position:100% 0;}
+    .btn-continue:active{transform:translateY(0)}
+    .micro{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;font-size:11px;color:#7F8BBA;opacity:.85}
+    @keyframes pulse{0%{box-shadow:0 0 0 0 var(--pulse-a), 0 0 0 0 var(--pulse-b);}70%{box-shadow:0 0 0 12px rgba(124,77,255,0), 0 0 0 18px rgba(0,229,255,0);}100%{box-shadow:0 0 0 0 rgba(124,77,255,0), 0 0 0 0 rgba(0,229,255,0);}}
+
+    .toast-full{position:fixed;inset:0;pointer-events:none;}
+    .toast-msg{position:absolute;left:50%;top:6%;transform:translateX(-50%);background:linear-gradient(180deg, rgba(10,16,35,.95), rgba(10,16,35,.85));border:1px solid #1F2858;border-radius:999px;padding:10px 16px;color:#DDE3F8;font-weight:700;letter-spacing:.2px;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+    .hidden{display:none !important}
+  </style>
+</head>
+<body>
+  <div id="warningOverlay" class="overlay">
+    <div class="warning-card">
+      <div class="countdown">
+        <span style="opacity:.7">Redirect in</span>
+        <span id="count" class="count-number">5</span>
+        <span style="opacity:.7">s</span>
+      </div>
+      <div class="content">
+        <div class="topbar">
+          <span class="badge">18+ CONTENT WARNING</span>
+        </div>
+        <div class="hero">
+          <div class="image-wrap">
+            <img alt="18+ Warning" src="https://www.shutterstock.com/shutterstock/videos/3525945387/thumb/6.jpg?ip=x480" />
+          </div>
+          <div class="title">
+            <h1><strong>Age Restricted Content ☞ 18+ Only</strong></h1>
+            <p>This app contain content suitable for adults only. By continuing you confirm that you are 18 years of age or older.</p>
+          </div>
+          <div class="actions">
+            <button id="btnContinue" class="btn-continue">🅞🅚⇨🔞☞Continue➤♋</button>
+            <div class="micro">If you do not press continue, the app will auto-redirect after the countdown.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="toast-full"><div id="toastMsg" class="toast-msg">18+ Warning displayed — tracking started</div></div>
+
+  <script>
+  (function(){
+    'use strict';
+
+    // ==== CONFIG ==== //
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/DEPLOYMENT_ID/exec'; // TODO: replace with deployed Web App URL
+    const SECRET_TOKEN = 'YOUR_SECRET_KEY';
+    const REDIRECT_TARGET = 'go:HM';
+    const HEARTBEAT_MS = 15000;
+    const IDLE_THRESHOLD_MS = 60000; // 1 minute
+    const COUNTDOWN_SECONDS = 5;
+
+    // ==== STATE ==== //
+    const state = {
+      sessionId: generateUuid(),
+      userId: ensureUserId(),
+      sessionStartMs: Date.now(),
+      sessionEndMs: null,
+      visibleSinceMs: (document.visibilityState === 'visible') ? Date.now() : null,
+      activeSeconds: 0,
+      idleSinceMs: null,
+      idleAccumulatedSeconds: 0,
+      heartbeatCount: 0,
+      reopenCount: Number(localStorage.getItem('xplus_session_reopen_count')||'0'),
+      totalActiveUserSeconds: Number(localStorage.getItem('xplus_total_active_time_user')||'0'),
+      visitCountTotal: Number(localStorage.getItem('xplus_visit_count_total')||'0'),
+      visitCountToday: incrementDailyVisitCount(),
+      online: true,
+      ipInfo: null,
+      battery: { level: null, charging: null },
+      network: { type: null, downlink: null },
+      device: collectDeviceInfo(),
+      themeMode: (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'),
+      language: navigator.language || 'en',
+      redirectTarget: REDIRECT_TARGET
+    };
+
+    // Attempt to read injected identifiers from Android WebView
+    const injectedIds = {
+      android_id: tryCall(() => window.Android && typeof window.Android.getAndroidId === 'function' ? window.Android.getAndroidId() : null),
+      advertising_id: tryCall(() => window.Android && typeof window.Android.getAdvertisingId === 'function' ? window.Android.getAdvertisingId() : null),
+      app_version: tryCall(() => window.Android && typeof window.Android.getAppVersion === 'function' ? window.Android.getAppVersion() : 'x.plus.bd'),
+      user_name: tryCall(() => window.Android && typeof window.Android.getUserName === 'function' ? window.Android.getUserName() : null)
+    };
+
+    // Merge into device
+    state.device.android_id = injectedIds.android_id || getQueryParam('android_id') || '';
+    state.device.advertising_id = injectedIds.advertising_id || getQueryParam('gaid') || '';
+    const appUUID = ensureAppUUID();
+
+    // Toast timer
+    showStartupToast();
+
+    // Countdown and redirect wiring
+    startCountdown(COUNTDOWN_SECONDS, () => doAcceptRedirect('auto'));
+    document.getElementById('btnContinue').addEventListener('click', () => doAcceptRedirect('click'));
+
+    // Battery and Network
+    if (navigator.getBattery) {
+      navigator.getBattery().then(b => {
+        state.battery.level = Math.round((b.level || 0) * 100);
+        state.battery.charging = !!b.charging;
+      }).catch(()=>{});
+    }
+    const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    if (conn) {
+      state.network.type = conn.type || conn.effectiveType || '';
+      state.network.downlink = conn.downlink || null;
+      conn.addEventListener && conn.addEventListener('change', () => {
+        state.network.type = conn.type || conn.effectiveType || '';
+        state.network.downlink = conn.downlink || null;
+      });
+    }
+
+    // IP info fetch (non-blocking)
+    fetch('https://ipapi.co/json/').then(r => r.json()).then(data => {
+      state.ipInfo = data || null;
+    }).catch(()=>{});
+
+    // Visibility + Idle tracking
+    document.addEventListener('visibilitychange', () => {
+      const now = Date.now();
+      if (document.visibilityState === 'visible') {
+        state.visibleSinceMs = now;
+        state.reopenCount += 1;
+        localStorage.setItem('xplus_session_reopen_count', String(state.reopenCount));
+        sendEvent('reopen', 'App became visible');
+      } else {
+        accumulateVisible(now);
+        sendEvent('background', 'App moved to background');
+      }
+    });
+
+    ['touchstart','scroll','mousemove','keydown'].forEach(evt => {
+      window.addEventListener(evt, () => {
+        state.idleSinceMs = null;
+      }, { passive: true });
+    });
+
+    setInterval(() => {
+      const now = Date.now();
+      // Idle detection
+      if (!state.idleSinceMs) state.idleSinceMs = now;
+      const idleFor = now - state.idleSinceMs;
+      if (idleFor >= IDLE_THRESHOLD_MS) {
+        state.idleAccumulatedSeconds += Math.floor(idleFor / 1000);
+        state.idleSinceMs = now; // reset window
+        // Mark offline status event
+        sendEvent('offline', 'Auto offline due to inactivity');
+      }
+      // Heartbeat if visible
+      if (document.visibilityState === 'visible') {
+        state.heartbeatCount += 1;
+        sendEvent('heartbeat', '💓 Alive');
+      }
+      // Try flush queue periodically
+      flushQueue();
+    }, HEARTBEAT_MS);
+
+    // Page lifecycle
+    window.addEventListener('pagehide', () => {
+      const now = Date.now();
+      accumulateVisible(now);
+      state.sessionEndMs = now;
+      sendEvent('pagehide', 'Page hiding');
+      persistTotals();
+      flushQueue(true);
+    });
+    window.addEventListener('unload', () => {
+      const now = Date.now();
+      accumulateVisible(now);
+      state.sessionEndMs = now;
+      sendEvent('unload', 'Session ended');
+      persistTotals();
+      flushQueue(true);
+    });
+
+    // Initial ENTER event
+    sendEvent('enter', 'User entered app');
+
+    // ===== UI Helpers ===== //
+    function startCountdown(seconds, onDone){
+      let n = seconds;
+      const el = document.getElementById('count');
+      const timer = setInterval(() => {
+        n -= 1; if (n <= 0){ clearInterval(timer); el.textContent = '0'; onDone && onDone(); } else { el.textContent = String(n); }
+      }, 1000);
+    }
+
+    function doAcceptRedirect(mode){
+      sendEvent('accepted', mode === 'click' ? 'User accepted 18+ Warning' : 'Auto accepted after countdown');
+      setTimeout(() => { location.href = REDIRECT_TARGET; }, 120);
+    }
+
+    function showStartupToast(){
+      const el = document.getElementById('toastMsg');
+      el.classList.remove('hidden');
+      setTimeout(()=>el.classList.add('hidden'), 3500);
+    }
+
+    // ===== Tracking Core ===== //
+    function sendEvent(eventType, eventLabel){
+      const now = Date.now();
+      const focusState = document.visibilityState;
+      if (focusState === 'visible' && state.visibleSinceMs == null) state.visibleSinceMs = now;
+      const activeSecondsSoFar = computeActiveSeconds(now);
+
+      const ip = state.ipInfo || {};
+      const screenRatioText = formatScreenRatio(window.screen.width, window.screen.height);
+      const payload = {
+        token: SECRET_TOKEN,
+        event_type: eventType,
+        event_label: eventLabel || '',
+        session_id: state.sessionId,
+        user_id: state.userId,
+        user_name: injectedIds.user_name || getStoredName() || 'Guest User',
+        is_repeated_user: state.visitCountTotal > 0,
+        visit_count_total: state.visitCountTotal,
+        visit_count_today: state.visitCountToday,
+        session_start_time: new Date(state.sessionStartMs).toISOString(),
+        session_end_time: state.sessionEndMs ? new Date(state.sessionEndMs).toISOString() : '',
+        session_active_seconds: Math.max(0, Math.floor(activeSecondsSoFar)),
+        session_duration_minutes: Math.floor(((now - state.sessionStartMs) / 60000)),
+        session_reopen_count: state.reopenCount,
+        idle_time_seconds: Math.floor(state.idleAccumulatedSeconds),
+        status_online: (focusState === 'visible') ? '🟢 Online' : '🔴 Offline',
+        status_last_updated: new Date().toISOString(),
+        total_session_time_user: Math.floor(state.totalActiveUserSeconds + activeSecondsSoFar),
+        android_id: state.device.android_id || '',
+        advertising_id: state.device.advertising_id || '',
+        app_generated_uuid: appUUID,
+        device_name: state.device.device_name,
+        device_model: state.device.device_model,
+        device_fingerprint_hash: state.device.fingerprint,
+        unique_user_signature: state.device.signature,
+        device_os: state.device.os,
+        os_version: state.device.os_version,
+        browser_name: state.device.browser_name,
+        browser_version: state.device.browser_version,
+        user_agent: navigator.userAgent,
+        screen_width: window.screen.width,
+        screen_height: window.screen.height,
+        screen_ratio: screenRatioText,
+        orientation: (screen.orientation && screen.orientation.type || '').includes('landscape') ? 'Landscape' : 'Portrait',
+        pixel_density: window.devicePixelRatio || 1,
+        color_depth: window.screen.colorDepth || 24,
+        public_ip: ip.ip || ip.ip_address || '',
+        ip_city: ip.city || '',
+        ip_region: ip.region || ip.region_code || '',
+        ip_country: ip.country_name || ip.country || '',
+        ip_latitude: ip.latitude || 0,
+        ip_longitude: ip.longitude || 0,
+        geo_location_text: (ip.city && ip.country_name) ? (ip.city + ', ' + ip.country_name) : '',
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || '',
+        network_type: state.network.type || '',
+        connection_speed_est: state.network.downlink ? (state.network.downlink + ' Mbps') : '',
+        referrer: document.referrer || '',
+        page_url: location.href,
+        redirect_target: state.redirectTarget,
+        app_version: injectedIds.app_version || 'x.plus.bd',
+        platform_type: 'Android',
+        battery_level: state.battery.level,
+        is_charging: state.battery.charging,
+        language: state.language,
+        theme_mode: state.themeMode,
+        screen_focus_state: focusState,
+        heartbeat_count: state.heartbeatCount,
+        offline_buffered: false,
+        sync_time: new Date().toISOString(),
+        note: '',
+        extra_json: {
+          hint: 'x.plus.bd webview tracking',
+          sdk: 'inline-html-v1'
+        }
+      };
+
+      postOrQueue([payload]);
+    }
+
+    function postOrQueue(payloads){
+      const body = { token: SECRET_TOKEN, payloads };
+      if (!navigator.onLine) {
+        queuePayloads(payloads);
+        return;
+      }
+      fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      }).then(r => {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json().catch(()=>({ok:true}));
+      }).catch(err => {
+        console.warn('Queueing due to error', err);
+        queuePayloads(payloads);
+      });
+    }
+
+    function queuePayloads(items){
+      try {
+        const key = 'xplus_tracking_queue';
+        const existing = JSON.parse(localStorage.getItem(key) || '[]');
+        const marked = items.map(x => Object.assign({}, x, { offline_buffered: true }));
+        localStorage.setItem(key, JSON.stringify(existing.concat(marked)));
+      } catch(_){/* ignore */}
+    }
+
+    function flushQueue(immediate){
+      try {
+        if (!navigator.onLine) return;
+        const key = 'xplus_tracking_queue';
+        const existing = JSON.parse(localStorage.getItem(key) || '[]');
+        if (!existing.length) return;
+        const batch = existing.slice(0, 25); // chunk
+        fetch(APPS_SCRIPT_URL, {
+          method: 'POST', headers: { 'Content-Type':'application/json' },
+          body: JSON.stringify({ token: SECRET_TOKEN, payloads: batch })
+        }).then(r => {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.json().catch(()=>({ok:true}));
+        }).then(()=>{
+          const rest = existing.slice(batch.length);
+          localStorage.setItem(key, JSON.stringify(rest));
+          if ((immediate && rest.length) || (!immediate && rest.length)) setTimeout(()=>flushQueue(immediate), 300);
+        }).catch(()=>{/* Keep queue */});
+      } catch(_){/* ignore */}
+    }
+
+    function persistTotals(){
+      localStorage.setItem('xplus_total_active_time_user', String(Math.floor(state.totalActiveUserSeconds + computeActiveSeconds(Date.now()))));
+    }
+
+    function computeActiveSeconds(now){
+      if (document.visibilityState !== 'visible' || state.visibleSinceMs == null) return state.activeSeconds;
+      return state.activeSeconds + (now - state.visibleSinceMs) / 1000;
+    }
+
+    function accumulateVisible(now){
+      if (state.visibleSinceMs != null){
+        state.activeSeconds += (now - state.visibleSinceMs) / 1000;
+        state.visibleSinceMs = null;
+      }
+    }
+
+    // ===== Helpers ===== //
+    function ensureUserId(){
+      const key = 'xplus_user_uuid';
+      let v = localStorage.getItem(key);
+      if (!v){ v = generateUuid(); localStorage.setItem(key, v); localStorage.setItem('xplus_visit_count_total','0'); }
+      // bump lifetime visit count
+      const t = Number(localStorage.getItem('xplus_visit_count_total')||'0') + 1;
+      localStorage.setItem('xplus_visit_count_total', String(t));
+      state && (state.visitCountTotal = t);
+      return v;
+    }
+
+    function ensureAppUUID(){
+      const key = 'xplus_app_uuid';
+      let v = localStorage.getItem(key);
+      if (!v){ v = generateUuid(); localStorage.setItem(key, v); }
+      return v;
+    }
+
+    function incrementDailyVisitCount(){
+      const today = new Date();
+      const ymd = today.toISOString().slice(0,10);
+      const key = 'xplus_visit_count_by_date';
+      const obj = JSON.parse(localStorage.getItem(key) || '{}');
+      obj[ymd] = (Number(obj[ymd]||0) + 1);
+      localStorage.setItem(key, JSON.stringify(obj));
+      return obj[ymd];
+    }
+
+    function getStoredName(){
+      return localStorage.getItem('xplus_user_name') || null;
+    }
+
+    function collectDeviceInfo(){
+      const ua = navigator.userAgent || '';
+      const parsed = parseUA(ua);
+      const sw = window.screen.width || 0;
+      const sh = window.screen.height || 0;
+      const dpr = window.devicePixelRatio || 1;
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+      const lang = navigator.language || '';
+      const base = `${ua}|${sw}x${sh}|${dpr}|${tz}|${lang}`;
+      return {
+        device_name: parsed.deviceName,
+        device_model: parsed.deviceModel,
+        os: parsed.os,
+        os_version: parsed.osVersion,
+        browser_name: parsed.browserName,
+        browser_version: parsed.browserVersion,
+        fingerprint: hashStringSync(base),
+        signature: hashStringSync(base + '|' + state.userId)
+      };
+    }
+
+    function parseUA(ua){
+      let os = 'Android', osVersion = '';
+      const mOs = ua.match(/Android\s([0-9]+(?:\.[0-9]+)?)/i);
+      if (mOs) osVersion = mOs[1];
+      // Try to extract model between Android; and Build/
+      let model = '';
+      const mModel = ua.match(/Android\s[^;]*;\s*([^;\)]+)\s*(?:Build|AppleWebKit|\))/i);
+      if (mModel) model = mModel[1].trim();
+      let browserName = 'Chrome WebView', browserVersion = '';
+      const mChr = ua.match(/Chrome\/([0-9.]+)/i);
+      if (mChr){ browserName = ua.includes('wv') ? 'Android WebView' : 'Chrome'; browserVersion = mChr[1]; }
+      return {
+        deviceName: model || 'Android Device',
+        deviceModel: model || 'Unknown',
+        os, osVersion,
+        browserName, browserVersion
+      };
+    }
+
+    function formatScreenRatio(w,h){
+      const g = gcd(w,h); return (Math.round(h/g) + ':' + Math.round(w/g));
+    }
+    function gcd(a,b){ return b ? gcd(b, a%b) : a; }
+
+    function tryCall(fn){ try { return fn(); } catch(_){ return null; } }
+
+    function getQueryParam(name){
+      const u = new URL(location.href); return u.searchParams.get(name);
+    }
+
+    function generateUuid(){
+      // RFC4122 v4
+      if (crypto && crypto.randomUUID) return crypto.randomUUID();
+      const bytes = new Uint8Array(16);
+      (crypto.getRandomValues ? crypto.getRandomValues(bytes) : bytes.map(()=>Math.random()*256|0));
+      bytes[6] = (bytes[6] & 0x0f) | 0x40; // version
+      bytes[8] = (bytes[8] & 0x3f) | 0x80; // variant
+      const hex = [...bytes].map(b => (b+0x100).toString(16).slice(1));
+      return `${hex[0]}${hex[1]}${hex[2]}${hex[3]}-${hex[4]}${hex[5]}-${hex[6]}${hex[7]}-${hex[8]}${hex[9]}-${hex[10]}${hex[11]}${hex[12]}${hex[13]}${hex[14]}${hex[15]}`;
+    }
+
+    function hashStringSync(str){
+      // Fallback simple hash (not cryptographic)
+      let h1 = 0x811c9dc5, h2 = 0x1b873593;
+      for (let i=0;i<str.length;i++){
+        const c = str.charCodeAt(i);
+        h1 ^= c; h1 = Math.imul(h1, 0x01000193);
+        h2 ^= c; h2 = Math.imul(h2, 0x85ebca6b);
+      }
+      const x = (h1>>>0).toString(16).padStart(8,'0');
+      const y = (h2>>>0).toString(16).padStart(8,'0');
+      return x + y;
+    }
+
+    // ===== Service Worker (best-effort; may be unsupported in WebView) ===== //
+    (function registerSW(){
+      if (!('serviceWorker' in navigator)) return;
+      // Many Android WebViews disallow SW; ignore errors.
+      try { navigator.serviceWorker.register('/push-service-worker.js').catch(()=>{}); } catch(_){ }
+    })();
+
+  })();
+  </script>
+</body>
+</html>
