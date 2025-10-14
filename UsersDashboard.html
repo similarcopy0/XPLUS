@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>x.plus.bd — Users Dashboard</title>
+  <style>
+    :root {
+      --bg: #0b0b0c;
+      --panel: #121317;
+      --panel-2: #171922;
+      --fg: #f3f5f7;
+      --muted: #9aa3ad;
+      --muted-2: #7c8591;
+      --accent: #7c3aed; /* purple */
+      --accent-2: #22c55e; /* green */
+      --warn: #f59e0b;
+      --danger: #ef4444;
+      --info: #38bdf8;
+      --good: #10b981;
+      --ring: 0 0 0 2px rgba(124,58,237,.25), 0 8px 30px rgba(124,58,237,.25);
+      --radius: 1rem;
+      --radius-sm: .75rem;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+    html, body { margin: 0; background: radial-gradient(1200px 600px at 10% -10%, rgba(124,58,237,.15), transparent), radial-gradient(800px 400px at 110% 10%, rgba(56,189,248,.12), transparent), var(--bg); color: var(--fg); font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, "Helvetica Neue", Arial; }
+    html { font-size: 100%; }
+    @media (max-width: 600px) { html { font-size: 93.75%; } }
+
+    .wrap { max-width: 1200px; margin: 0 auto; padding: 1rem; }
+
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .75rem 1rem; background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.02)); border: 1px solid rgba(255,255,255,.08); border-radius: var(--radius); box-shadow: var(--shadow); backdrop-filter: blur(8px); }
+    .brand { display: flex; align-items: center; gap: .6rem; font-weight: 800; letter-spacing: .2px; }
+    .badge { display: inline-grid; place-items: center; width: 1.9rem; height: 1.9rem; border-radius: .6rem; background: linear-gradient(135deg, var(--accent), #6d28d9); box-shadow: 0 8px 20px rgba(124,58,237,.35); }
+
+    .filters { display: grid; grid-template-columns: repeat(12, 1fr); gap: .75rem; margin: 1rem 0; }
+    .filter { grid-column: span 3; min-width: 0; }
+    @media (max-width: 900px) { .filter { grid-column: span 6; } }
+    @media (max-width: 600px) { .filter { grid-column: span 12; } }
+    .control { width: 100%; background: var(--panel); border: 1px solid rgba(255,255,255,.08); color: var(--fg); border-radius: .75rem; padding: .75rem .9rem; font-weight: 600; box-shadow: inset 0 -20px 35px rgba(255,255,255,.02); }
+
+    .kpis { display: grid; grid-template-columns: repeat(12, 1fr); gap: .75rem; }
+    .kpi { grid-column: span 3; min-width: 0; padding: 1rem; border-radius: var(--radius); background: linear-gradient(180deg, var(--panel-2), var(--panel)); border: 1px solid rgba(255,255,255,.08); box-shadow: var(--shadow); display: grid; gap: .35rem; cursor: pointer; transition: transform .15s ease, box-shadow .15s ease; }
+    .kpi:hover { transform: translateY(-2px); box-shadow: 0 14px 36px rgba(0,0,0,.45); }
+    .kpi-title { color: var(--muted); font-weight: 700; font-size: .9rem; }
+    .kpi-value { font-size: 1.8rem; font-weight: 900; letter-spacing: .4px; }
+    .kpi-sub { color: var(--muted-2); font-weight: 600; font-size: .85rem; }
+    @media (max-width: 900px) { .kpi { grid-column: span 6; } }
+    @media (max-width: 600px) { .kpi { grid-column: span 12; } }
+
+    .section { margin-top: 1rem; padding: 1rem; border-radius: var(--radius); background: linear-gradient(180deg, var(--panel-2), var(--panel)); border: 1px solid rgba(255,255,255,.08); box-shadow: var(--shadow); }
+
+    .list-head { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-bottom: .5rem; }
+    .tabs { display: flex; gap: .5rem; flex-wrap: wrap; }
+    .tab { padding: .5rem .75rem; border-radius: 999px; background: rgba(255,255,255,.06); color: var(--fg); border: 1px solid rgba(255,255,255,.08); font-weight: 700; cursor: pointer; }
+    .tab[aria-selected="true"] { background: linear-gradient(135deg, var(--accent), #6d28d9); box-shadow: 0 8px 20px rgba(124,58,237,.35); }
+
+    .table { width: 100%; border-collapse: collapse; }
+    .table th, .table td { padding: .6rem .5rem; text-align: left; border-bottom: 1px dashed rgba(255,255,255,.08); vertical-align: top; }
+    .table th { color: var(--muted); font-weight: 800; font-size: .8rem; }
+    .chip { display: inline-grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: 999px; }
+
+    .chart { display: grid; grid-template-columns: repeat(14, minmax(8px, 1fr)); gap: .4rem; align-items: end; height: 160px; margin-top: .6rem; }
+    .bar { background: linear-gradient(180deg, rgba(124,58,237,.85), rgba(124,58,237,.35)); border-radius: .35rem; box-shadow: 0 6px 16px rgba(124,58,237,.35); }
+
+    .muted { color: var(--muted); }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="topbar">
+      <div class="brand"><div class="badge">📊</div> <div>x.plus.bd — Users Dashboard</div></div>
+      <div class="muted" id="lastUpdated">Loading…</div>
+    </header>
+
+    <section class="filters">
+      <div class="filter"><select id="range" class="control" aria-label="Time range">
+        <option value="all">All time</option>
+        <option value="24h">Last 24 hours</option>
+        <option value="7d">Last 7 days</option>
+        <option value="30d">Last 30 days</option>
+        <option value="3m">Last 3 months</option>
+        <option value="6m">Last 6 months</option>
+        <option value="12m">Last 12 months</option>
+        <option value="1y">Last 1 year</option>
+        <option value="3y">Last 3 years</option>
+        <option value="6y">Last 6 years</option>
+        <option value="12y">Last 12 years</option>
+      </select></div>
+      <div class="filter"><select id="status" class="control" aria-label="Status">
+        <option value="any">Any status</option>
+        <option value="live">Live / Online</option>
+        <option value="active">Active (≤ 30d)</option>
+        <option value="inactive">Inactive (> 30d)</option>
+        <option value="new">New (≤ 15d)</option>
+        <option value="24h">Visited in 24h</option>
+      </select></div>
+      <div class="filter"><input id="country" class="control" placeholder="Filter by country" /></div>
+      <div class="filter"><input id="city" class="control" placeholder="Filter by city" /></div>
+    </section>
+
+    <section class="kpis">
+      <div class="kpi" data-open="all">
+        <div class="kpi-title">Total Users</div>
+        <div id="kpiTotal" class="kpi-value">0</div>
+        <div class="kpi-sub">All users count</div>
+      </div>
+      <div class="kpi" data-open="live">
+        <div class="kpi-title">Live / Online</div>
+        <div id="kpiLive" class="kpi-value">0</div>
+        <div class="kpi-sub">Currently online 🟢</div>
+      </div>
+      <div class="kpi" data-open="active">
+        <div class="kpi-title">Active (≤ 30d)</div>
+        <div id="kpiActive" class="kpi-value">0</div>
+        <div class="kpi-sub">Visited in last 30 days 🟣</div>
+      </div>
+      <div class="kpi" data-open="inactive">
+        <div class="kpi-title">Inactive (> 30d)</div>
+        <div id="kpiInactive" class="kpi-value">0</div>
+        <div class="kpi-sub">No visit in 30+ days 🔴</div>
+      </div>
+      <div class="kpi" data-open="new">
+        <div class="kpi-title">New (≤ 15d)</div>
+        <div id="kpiNew" class="kpi-value">0</div>
+        <div class="kpi-sub">Recently joined 🆕</div>
+      </div>
+      <div class="kpi" data-open="24h">
+        <div class="kpi-title">Last 24h</div>
+        <div id="kpi24h" class="kpi-value">0</div>
+        <div class="kpi-sub">Visited in 24 hours 🔵</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-title">Total Visits (sum)</div>
+        <div id="kpiVisits" class="kpi-value">0</div>
+        <div class="kpi-sub">All sessions Z / H</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-title">Total Minutes (sum)</div>
+        <div id="kpiMinutes" class="kpi-value">0</div>
+        <div class="kpi-sub">Total duration (G)</div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="list-head">
+        <div>
+          <div style="font-weight:900;">Users List</div>
+          <div class="muted">Filtered and sorted by recent activity</div>
+        </div>
+        <div class="tabs" role="tablist">
+          <button class="tab" role="tab" data-tab="all" aria-selected="true">All</button>
+          <button class="tab" role="tab" data-tab="live">Live</button>
+          <button class="tab" role="tab" data-tab="active">Active</button>
+          <button class="tab" role="tab" data-tab="inactive">Inactive</button>
+          <button class="tab" role="tab" data-tab="new">New</button>
+          <button class="tab" role="tab" data-tab="24h">24h</button>
+        </div>
+      </div>
+      <div style="overflow:auto;">
+        <table class="table" id="usersTable">
+          <thead>
+            <tr>
+              <th>User Id</th>
+              <th>Timestamp</th>
+              <th>IP</th>
+              <th>City</th>
+              <th>Country</th>
+              <th>Last Visited</th>
+              <th>Last Duration (min)</th>
+              <th>Total Duration (min)</th>
+              <th>Total Visits</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="usersBody"></tbody>
+        </table>
+      </div>
+
+      <div style="margin-top:1rem;">
+        <div style="font-weight:900;">Visits over time</div>
+        <div class="muted">Approximate activity in selected range</div>
+        <div class="chart" id="chart"></div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwzvrRCMrWrQkwXXo0tH0z7hUv3jUPtBnTWmm79KuN4w35RvhKkza8GUEQljqNbetav/exec';
+    const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSIOGb5RBMnQiQ-GiHtkOn5qQhGhQnUmCsVie-jSv6UhvMihSQv1JN03Tr1EtoTIfbLThkSgGzNdwqc/pub?output=csv';
+
+    const headers = [
+      'Timestamp','Unique User ID','First Visit DateTime','Last Visit DateTime','Last Exit DateTime','Last Visited Duration (minutes)','Total Visited Duration (minutes)','Total Visit Count','Device Type','Device Model / Name','Browser / WebView Info','Screen Resolution / Ratio','Timezone','IP Address','Country','City','Location (Latitude, Longitude)','Last Visited Page / Section Name','App Entry Time','App Exit Time','Live Status Icon','User Status (Text)','Days Since Last Visit','Account Age (Days)','Repeat Visit Type','Total Sessions','Active Period Range','Source (optional)','Notes / Admin Tag'
+    ];
+
+    function parseDate(s) { const d = new Date(s); return isNaN(d) ? null : d; }
+    function daysBetween(a, b) { return Math.floor((a - b) / (1000*60*60*24)); }
+
+    function classify(row){
+      const now = new Date();
+      const first = parseDate(row['First Visit DateTime']);
+      const last = parseDate(row['Last Visit DateTime']);
+      const lastExit = parseDate(row['Last Exit DateTime']);
+      const minutesSinceLast = last ? (now - last)/60000 : Infinity;
+      const daysSinceLast = last ? (now - last)/86400000 : Infinity;
+      const accountAgeDays = first ? Math.max(0, Math.floor((now - first)/86400000)) : Infinity;
+      const live = last && minutesSinceLast <= 5; // heuristic
+      const within24h = last && (now - last) <= 24*60*60*1000;
+      const active = daysSinceLast <= 30;
+      const inactive = !isFinite(daysSinceLast) ? false : daysSinceLast > 30;
+      const isNew = isFinite(accountAgeDays) && accountAgeDays <= 15;
+      let icon = '🔴';
+      if (live) icon = '🟢';
+      else if (isNew) icon = '🆕';
+      else if (within24h) icon = '🔵';
+      else if (active) icon = '🟣';
+      const status = live ? 'Live' : (isNew ? 'New' : (active ? 'Active' : 'Inactive'));
+      return { live, within24h, active, inactive, isNew, icon, status, daysSinceLast, accountAgeDays };
+    }
+
+    async function fetchRows(){
+      try {
+        const r = await fetch(APPS_SCRIPT_URL + '?action=rows');
+        if (!r.ok) throw new Error('apps script rows failed');
+        const j = await r.json();
+        if (!Array.isArray(j.rows)) throw new Error('invalid rows json');
+        return j.rows;
+      } catch (e) {
+        const r = await fetch(CSV_URL);
+        const txt = await r.text();
+        const lines = txt.split(/\r?\n/).filter(Boolean);
+        const head = lines.shift().split(',');
+        return lines.map(line => {
+          const cols = parseCsvLine(line);
+          const obj = {}; head.forEach((h, i) => obj[h.trim()] = (cols[i] ?? '').trim());
+          return obj;
+        });
+      }
+    }
+
+    function parseCsvLine(line){
+      const out = []; let cur = ''; let inQ = false;
+      for (let i=0; i<line.length; i++){
+        const ch = line[i];
+        if (ch === '"'){
+          if (inQ && line[i+1] === '"'){ cur += '"'; i++; }
+          else inQ = !inQ;
+        } else if (ch === ',' && !inQ){ out.push(cur); cur = ''; }
+        else cur += ch;
+      }
+      out.push(cur); return out;
+    }
+
+    function withinRange(row, range){
+      const now = new Date();
+      if (range === 'all') return true;
+      const last = parseDate(row['Last Visit DateTime']);
+      if (!last) return false;
+      const map = { '24h': 1, '7d': 7, '30d': 30 };
+      if (range in map){ return (now - last) <= map[range]*86400000; }
+      const monthsToDays = { '3m': 90, '6m': 180, '12m': 365 };
+      if (range in monthsToDays){ return (now - last) <= monthsToDays[range]*86400000; }
+      const yearsToDays = { '1y': 365, '3y': 365*3, '6y': 365*6, '12y': 365*12 };
+      if (range in yearsToDays){ return (now - last) <= yearsToDays[range]*86400000; }
+      return true;
+    }
+
+    function matchesStatus(row, status){
+      const c = classify(row);
+      if (status === 'any') return true;
+      if (status === 'live') return c.live;
+      if (status === 'active') return c.active;
+      if (status === 'inactive') return c.inactive;
+      if (status === 'new') return c.isNew;
+      if (status === '24h') return c.within24h;
+      return true;
+    }
+
+    function filterRows(rows){
+      const range = document.getElementById('range').value;
+      const status = document.getElementById('status').value;
+      const country = document.getElementById('country').value.trim().toLowerCase();
+      const city = document.getElementById('city').value.trim().toLowerCase();
+      return rows.filter(r => withinRange(r, range) && matchesStatus(r, status)
+        && (!country || (r['Country']||'').toLowerCase().includes(country))
+        && (!city || (r['City']||'').toLowerCase().includes(city))
+      );
+    }
+
+    function updateKpis(rows){
+      const total = rows.length;
+      let live=0, active=0, inactive=0, isNew=0, within24h=0, visits=0, minutes=0;
+      for (const r of rows){
+        const c = classify(r);
+        if (c.live) live++;
+        if (c.active) active++;
+        if (c.inactive) inactive++;
+        if (c.isNew) isNew++;
+        if (c.within24h) within24h++;
+        visits += Number(r['Total Visit Count']||r['Total Sessions']||0);
+        minutes += Number(r['Total Visited Duration (minutes)']||0);
+      }
+      document.getElementById('kpiTotal').textContent = String(total);
+      document.getElementById('kpiLive').textContent = String(live);
+      document.getElementById('kpiActive').textContent = String(active);
+      document.getElementById('kpiInactive').textContent = String(inactive);
+      document.getElementById('kpiNew').textContent = String(isNew);
+      document.getElementById('kpi24h').textContent = String(within24h);
+      document.getElementById('kpiVisits').textContent = String(visits);
+      document.getElementById('kpiMinutes').textContent = String(Math.round(minutes));
+    }
+
+    function renderTable(rows){
+      const tbody = document.getElementById('usersBody');
+      tbody.innerHTML = '';
+      const sorted = rows.slice().sort((a,b) => {
+        const ad = parseDate(a['Last Visit DateTime']);
+        const bd = parseDate(b['Last Visit DateTime']);
+        return (bd?.getTime()||0) - (ad?.getTime()||0);
+      });
+      const frag = document.createDocumentFragment();
+      for (const r of sorted){
+        const c = classify(r);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><span class="muted">${escapeHtml(r['Unique User ID']||'')}</span></td>
+          <td>${escapeHtml(r['Timestamp']||'')}</td>
+          <td>${escapeHtml(r['IP Address']||'')}</td>
+          <td>${escapeHtml(r['City']||'')}</td>
+          <td>${escapeHtml(r['Country']||'')}</td>
+          <td>${escapeHtml(r['Last Visit DateTime']||'')}</td>
+          <td>${Number(r['Last Visited Duration (minutes)']||0).toFixed(2)}</td>
+          <td>${Number(r['Total Visited Duration (minutes)']||0).toFixed(2)}</td>
+          <td>${Number(r['Total Visit Count']||r['Total Sessions']||0)}</td>
+          <td title="${c.status}"><span class="chip">${c.icon}</span></td>
+        `;
+        frag.appendChild(tr);
+      }
+      tbody.appendChild(frag);
+    }
+
+    function renderChart(rows){
+      const chart = document.getElementById('chart');
+      chart.innerHTML = '';
+      const now = new Date();
+      const buckets = Array.from({length: 14}, (_,i)=>({ label: i, count: 0 }));
+      for (const r of rows){
+        const last = parseDate(r['Last Visit DateTime']);
+        if (!last) continue;
+        const daysAgo = Math.floor((now - last)/86400000);
+        if (daysAgo >= 0 && daysAgo < buckets.length){ buckets[daysAgo].count += 1; }
+      }
+      const max = Math.max(1, ...buckets.map(b => b.count));
+      for (let i=buckets.length-1; i>=0; i--){
+        const b = buckets[i];
+        const h = Math.max(8, Math.round((b.count / max) * 150));
+        const el = document.createElement('div');
+        el.className = 'bar'; el.style.height = h + 'px'; el.title = `${b.count} user(s) ${i} day(s) ago`;
+        chart.appendChild(el);
+      }
+    }
+
+    function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
+
+    function wireUi(rows){
+      const inputs = ['range','status','country','city'].map(id => document.getElementById(id));
+      for (const el of inputs){ el.addEventListener('input', () => refresh(rows)); }
+      document.querySelectorAll('.tab').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.tab').forEach(x => x.setAttribute('aria-selected','false'));
+          btn.setAttribute('aria-selected','true');
+          document.getElementById('status').value = btn.dataset.tab;
+          refresh(rows);
+        });
+      });
+      document.querySelectorAll('.kpi[data-open]').forEach(card => {
+        card.addEventListener('click', () => {
+          const key = card.getAttribute('data-open');
+          document.getElementById('status').value = key;
+          document.querySelectorAll('.tab').forEach(x => x.setAttribute('aria-selected','false'));
+          const match = document.querySelector(`.tab[data-tab="${key}"]`);
+          if (match) match.setAttribute('aria-selected','true');
+          refresh(rows);
+        });
+      });
+    }
+
+    function refresh(allRows){
+      const filtered = filterRows(allRows);
+      updateKpis(filtered);
+      renderTable(filtered);
+      renderChart(filtered);
+      document.getElementById('lastUpdated').textContent = 'Updated ' + new Date().toLocaleString();
+    }
+
+    (async function init(){
+      try {
+        const rows = await fetchRows();
+        wireUi(rows);
+        refresh(rows);
+      } catch (e) {
+        document.getElementById('lastUpdated').textContent = 'Failed to load data';
+      }
+    })();
+  </script>
+</body>
+</html>
