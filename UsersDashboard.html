@@ -1,0 +1,805 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Users Dashboard</title>
+  <style>
+    :root {
+      --bg: #0b0b0c;
+      --panel: #0e0f13;
+      --panel-2: #141722;
+      --panel-3: #0f1320;
+      --fg: #f3f5f7;
+      --muted: #9aa3ad;
+      --muted-2: #7c8591;
+      --accent: #7c3aed; /* purple */
+      --accent-2: #22c55e; /* green */
+      --warn: #f59e0b;
+      --danger: #ef4444;
+      --info: #38bdf8;
+      --good: #10b981;
+      --ring: 0 0 0 2px rgba(124,58,237,.25), 0 8px 30px rgba(124,58,237,.25);
+      --radius: 1rem;
+      --radius-sm: .75rem;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --grad-1: radial-gradient(1200px 600px at 10% -10%, rgba(124,58,237,.16), transparent);
+      --grad-2: radial-gradient(800px 400px at 110% 10%, rgba(56,189,248,.12), transparent);
+      --grad-3: radial-gradient(600px 600px at -10% 120%, rgba(34,197,94,.12), transparent);
+      --today: #8b5cf6; --yday: #60a5fa; --d7: #22c55e; --d15: #f59e0b; --d30: #ef4444; --m3: #14b8a6; --m6: #f472b6; --y1: #a78bfa;
+    }
+    html, body {
+      margin: 0; color: var(--fg); font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, "Helvetica Neue", Arial;
+      background: var(--grad-1), var(--grad-2), var(--grad-3), var(--bg);
+    }
+    html { font-size: 100%; }
+    @media (max-width: 600px) { html { font-size: 93.75%; } }
+    body { overflow-x: hidden; touch-action: pan-y; overscroll-behavior-x: contain; }
+
+    .wrap { max-width: 1200px; margin: 0 auto; padding: 1rem; display: grid; gap: 1rem; }
+
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding: .9rem 1rem; background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03)); border: 1px solid rgba(255,255,255,.08); border-radius: var(--radius); box-shadow: var(--shadow); backdrop-filter: blur(10px); position: sticky; top: 0; z-index: 10; }
+    .brand { display: flex; align-items: center; gap: .6rem; font-weight: 800; letter-spacing: .2px; }
+    .badge { display: inline-grid; place-items: center; width: 1.9rem; height: 1.9rem; border-radius: .6rem; background: linear-gradient(135deg, var(--accent), #6d28d9); box-shadow: 0 8px 20px rgba(124,58,237,.35); animation: float 4s ease-in-out infinite; }
+    @keyframes float { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-3px) } }
+
+    .actions { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+    .btn { appearance: none; border: 1px solid rgba(255,255,255,.12); background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.04)); color: var(--fg); border-radius: .7rem; padding: .5rem .75rem; font-weight: 800; cursor: pointer; box-shadow: var(--shadow); }
+    .btn:hover { border-color: rgba(124,58,237,.35); }
+
+    .toggle { display: inline-flex; align-items: center; gap: .5rem; font-weight: 800; }
+    .toggle input { position: absolute; opacity: 0; pointer-events: none; }
+    .track { width: 44px; height: 24px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); border-radius: 999px; position: relative; box-shadow: inset 0 -12px 20px rgba(255,255,255,.03); }
+    .thumb { position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 999px; background: #e5e7eb; transition: transform .18s ease, background .18s ease, box-shadow .18s ease; box-shadow: 0 4px 10px rgba(0,0,0,.25); }
+    .toggle input:checked + .track { border-color: rgba(124,58,237,.55); background: rgba(124,58,237,.25); }
+    .toggle input:checked + .track .thumb { transform: translateX(20px); background: #8b5cf6; }
+
+    .section { display: grid; gap: .75rem; padding: 1rem; border-radius: var(--radius); background: linear-gradient(180deg, var(--panel-2), var(--panel)); border: 1px solid rgba(255,255,255,.08); box-shadow: var(--shadow); }
+    .section-title { font-weight: 900; letter-spacing: .3px; display: flex; align-items: center; gap: .6rem; }
+    .section-sub { color: var(--muted); font-weight: 600; }
+
+    .filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
+    @media (max-width: 700px) { .filters { grid-template-columns: 1fr; } }
+
+    .filter { position: relative; display: grid; gap: .35rem; }
+    .filter-label { display: flex; align-items: center; gap: .5rem; color: var(--muted); font-weight: 800; font-size: .85rem; }
+    .filter .icon { width: 1.2rem; height: 1.2rem; display: grid; place-items: center; border-radius: .4rem; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.08); }
+    .control { width: 100%; background: var(--panel); border: 1px solid rgba(255,255,255,.12); color: var(--fg); border-radius: .75rem; padding: .75rem .9rem; font-weight: 600; box-shadow: inset 0 -20px 35px rgba(255,255,255,.02); }
+    .control::placeholder { color: var(--muted); }
+
+    .kpis-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
+    @media (max-width: 700px) { .kpis-grid { grid-template-columns: 1fr; } }
+    .kpi { min-width: 0; padding: 1rem; border-radius: var(--radius); background: linear-gradient(180deg, var(--panel-3), var(--panel)); border: 1px solid rgba(255,255,255,.08); box-shadow: var(--shadow); display: grid; gap: .35rem; cursor: pointer; transition: transform .15s ease, box-shadow .15s ease, border-color .2s ease; position: relative; overflow: hidden; }
+    .kpi::after { content: ""; position: absolute; inset: -40% -40% auto auto; height: 200%; width: 50%; background: radial-gradient(circle at 30% 50%, rgba(124,58,237,.25), transparent 60%); transform: rotate(25deg); filter: blur(12px); pointer-events: none; animation: shimmer 6s linear infinite; }
+    @keyframes shimmer { 0% { transform: translateX(-40%) rotate(25deg) } 100% { transform: translateX(80%) rotate(25deg) } }
+    .kpi:hover { transform: translateY(-2px); box-shadow: 0 14px 36px rgba(0,0,0,.45); border-color: rgba(124,58,237,.35); }
+    .kpi-title { color: var(--muted); font-weight: 700; font-size: .9rem; }
+    .kpi-value { font-size: 1.8rem; font-weight: 900; letter-spacing: .4px; }
+    .kpi-sub { color: var(--muted-2); font-weight: 600; font-size: .85rem; }
+
+    .list-head { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-bottom: .5rem; }
+    .tabs { display: flex; gap: .5rem; flex-wrap: wrap; }
+    .tab { padding: .5rem .75rem; border-radius: 999px; background: rgba(255,255,255,.06); color: var(--fg); border: 1px solid rgba(255,255,255,.08); font-weight: 700; cursor: pointer; }
+    .tab[aria-selected="true"] { background: linear-gradient(135deg, var(--accent), #6d28d9); box-shadow: 0 8px 20px rgba(124,58,237,.35); }
+
+    .table-wrap { overflow: hidden; }
+    .table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .table th, .table td { padding: .6rem .5rem; text-align: left; border-bottom: 1px dashed rgba(255,255,255,.08); vertical-align: top; word-break: break-word; white-space: normal; }
+    .table th { color: var(--muted); font-weight: 800; font-size: .8rem; }
+    .chip { display: inline-grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: 999px; }
+
+    /* Mobile cards list (no horizontal scroll) */
+    @media (max-width: 720px) {
+      .table-wrap { display: none; }
+      .cards { display: grid; gap: .75rem; }
+      .card { display: grid; gap: .4rem; padding: .9rem; border-radius: var(--radius); background: linear-gradient(180deg, var(--panel-3), var(--panel)); border: 1px solid rgba(255,255,255,.08); box-shadow: var(--shadow); }
+      .card-row { display: grid; grid-template-columns: 8rem 1fr; gap: .5rem; }
+      .card-key { color: var(--muted); font-weight: 700; }
+      .card-val { font-weight: 700; }
+    }
+    @media (min-width: 721px) { .cards { display: none; } }
+
+    /* Charts */
+    .chart { display: grid; grid-template-columns: repeat(8, minmax(10px, 1fr)); gap: .5rem; align-items: end; height: 180px; }
+    .bar { border-radius: .35rem; box-shadow: 0 6px 16px rgba(124,58,237,.35); position: relative; }
+    .bar::after { content: attr(data-label); position: absolute; bottom: -1.3rem; left: 50%; transform: translateX(-50%); color: var(--muted); font-size: .7rem; white-space: nowrap; }
+    .chart-row { display: grid; gap: .4rem; }
+    .legend { display: flex; flex-wrap: wrap; gap: .5rem 1rem; margin-top: .35rem; }
+    .legend-item { display: inline-flex; align-items: center; gap: .4rem; color: var(--muted); font-weight: 700; font-size: .85rem; }
+    .swatch { width: .85rem; height: .85rem; border-radius: .2rem; box-shadow: inset 0 0 0 1px rgba(255,255,255,.15); }
+
+    .muted { color: var(--muted); }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="topbar">
+      <div class="brand"><div class="badge">📊</div> <div>Users Dashboard</div></div>
+      <div class="actions">
+        <input id="quickSearch" class="control" placeholder="Quick search (User ID, IP, City, Country)" style="min-width: 14rem;" />
+        <label class="toggle" id="autoRefreshLabel" title="Auto-refresh every 30s">
+          <input id="autoRefreshToggle" type="checkbox" />
+          <span class="track"><span class="thumb"></span></span>
+          <span>Auto-refresh</span>
+        </label>
+        <select id="refreshInterval" class="control" aria-label="Refresh interval" style="width:auto;">
+          <option value="15000">15s</option>
+          <option value="30000" selected>30s</option>
+          <option value="60000">60s</option>
+        </select>
+        <button id="resetFilters" class="btn" type="button">↺ Reset Filters</button>
+        <button id="exportCsv" class="btn" type="button">⬇️ Export CSV</button>
+        <button id="exportJson" class="btn" type="button">⬇️ Export JSON</button>
+      </div>
+    </header>
+
+    <section class="section" id="filtersSection">
+      <div class="section-title">🔎 Filters</div>
+      <div class="section-sub">Refine users by time, status, and attributes from sheet</div>
+      <div class="filters">
+        <div class="filter">
+          <div class="filter-label"><span class="icon">⏳</span><span>Time range</span></div>
+          <select id="range" class="control" aria-label="Time range">
+            <option value="all">Time Range (All)</option>
+            <option value="12h">Last 12 hours</option>
+            <option value="24h">Last 24 hours</option>
+            <option value="7d">Last 7 days</option>
+            <option value="15d">Last 15 days</option>
+            <option value="30d">Last 30 days</option>
+            <option value="3m">Last 3 months</option>
+            <option value="6m">Last 6 months</option>
+            <option value="12m">Last 12 months</option>
+            <option value="1y">Last 1 year</option>
+            <option value="3y">Last 3 years</option>
+            <option value="6y">Last 6 years</option>
+            <option value="12y">Last 12 years</option>
+          </select>
+        </div>
+        <div class="filter">
+          <div class="filter-label"><span class="icon">🧿</span><span>Status</span></div>
+          <select id="status" class="control" aria-label="Status">
+            <option value="any">Status (Any)</option>
+            <option value="live">Live / Online</option>
+            <option value="active">Active (≤ 30d)</option>
+            <option value="inactive">Inactive (> 30d)</option>
+            <option value="new">New (≤ 15d)</option>
+            <option value="24h">Visited in 24h</option>
+          </select>
+        </div>
+        <div class="filter">
+          <div class="filter-label"><span class="icon">🌍</span><span>Country</span></div>
+          <select id="countrySelect" class="control" aria-label="Country"><option value="">Country (Any)</option></select>
+        </div>
+        <div class="filter">
+          <div class="filter-label"><span class="icon">🏙️</span><span>City</span></div>
+          <select id="citySelect" class="control" aria-label="City"><option value="">City (Any)</option></select>
+        </div>
+        <div class="filter">
+          <div class="filter-label"><span class="icon">🔢</span><span>IP Address</span></div>
+          <select id="ipSelect" class="control" aria-label="IP"><option value="">IP (Any)</option></select>
+        </div>
+        <div class="filter">
+          <div class="filter-label"><span class="icon">🗓️</span><span>Date From</span></div>
+          <input id="dateFrom" class="control" type="date" aria-label="Date from" placeholder="From" />
+        </div>
+        <div class="filter">
+          <div class="filter-label"><span class="icon">🗓️</span><span>Date To</span></div>
+          <input id="dateTo" class="control" type="date" aria-label="Date to" placeholder="To" />
+        </div>
+        <div class="filter">
+          <div class="filter-label"><span class="icon">⏱️</span><span>Timestamp</span></div>
+          <select id="timestampSelect" class="control" aria-label="Timestamp"><option value="">Timestamp (Any)</option></select>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="kpisSection">
+      <div class="section-title">📈 Overview</div>
+      <div class="kpis-grid">
+        <div class="kpi" data-open="all">
+          <div class="kpi-title">Total Users</div>
+          <div id="kpiTotal" class="kpi-value">0</div>
+          <div class="kpi-sub">All users count</div>
+        </div>
+        <div class="kpi" data-open="live">
+          <div class="kpi-title">Live / Online</div>
+          <div id="kpiLive" class="kpi-value">0</div>
+          <div class="kpi-sub">Currently online 🟢</div>
+        </div>
+        <div class="kpi" data-open="active">
+          <div class="kpi-title">Active (≤ 30d)</div>
+          <div id="kpiActive" class="kpi-value">0</div>
+          <div class="kpi-sub">Visited in last 30 days 🟣</div>
+        </div>
+        <div class="kpi" data-open="inactive">
+          <div class="kpi-title">Inactive (> 30d)</div>
+          <div id="kpiInactive" class="kpi-value">0</div>
+          <div class="kpi-sub">No visit in 30+ days 🔴</div>
+        </div>
+        <div class="kpi" data-open="new">
+          <div class="kpi-title">New (≤ 15d)</div>
+          <div id="kpiNew" class="kpi-value">0</div>
+          <div class="kpi-sub">Recently joined 🆕</div>
+        </div>
+        <div class="kpi" data-open="12h">
+          <div class="kpi-title">Last 12h</div>
+          <div id="kpi12h" class="kpi-value">0</div>
+          <div class="kpi-sub">Visited in 12 hours 🟢</div>
+        </div>
+        <div class="kpi" data-open="24h">
+          <div class="kpi-title">Last 24h</div>
+          <div id="kpi24h" class="kpi-value">0</div>
+          <div class="kpi-sub">Visited in 24 hours 🔵</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-title">Total Visits (sum)</div>
+          <div id="kpiVisits" class="kpi-value">0</div>
+          <div class="kpi-sub">All sessions</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="listSection">
+      <div class="list-head">
+        <div>
+          <div style="font-weight:900;">Users List</div>
+          <div class="section-sub">Filtered and sorted by recent activity</div>
+        </div>
+        <div class="actions">
+          <button id="exportCsv2" class="btn" type="button">⬇️ CSV</button>
+          <button id="exportJson2" class="btn" type="button">⬇️ JSON</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="table" id="usersTable">
+          <thead>
+            <tr>
+              <th>User Id</th>
+              <th>Timestamp</th>
+              <th>IP</th>
+              <th>City</th>
+              <th>Country</th>
+              <th>Last Visited</th>
+              <th>First Visit</th>
+              <th>Device Model</th>
+              <th>Screen</th>
+              <th>Timezone</th>
+              <th>Total Sessions</th>
+              <th>Total Visits</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="usersBody"></tbody>
+        </table>
+      </div>
+      <div class="cards" id="usersCards"></div>
+    </section>
+
+    <section class="section" id="activenessSection">
+      <div class="section-title">📊 Activeness Comparison</div>
+      <div class="section-sub">Today vs Yesterday vs 7d vs 15d vs 30d vs 3m vs 6m vs 1y</div>
+      <div class="actions" style="justify-content:flex-end"><button id="dlActiveness" class="btn" type="button">🖼️ Download PNG</button></div>
+      <div class="chart" id="chartActiveness"></div>
+      <div class="legend" id="legendActiveness"></div>
+    </section>
+
+    <section class="section" id="newUsersSection">
+      <div class="section-title">🆕 New Users Comparison</div>
+      <div class="section-sub">New users by Today, Yesterday, 7d, 15d, 30d, 3m, 6m, 1y</div>
+      <div class="actions" style="justify-content:flex-end"><button id="dlNewUsers" class="btn" type="button">🖼️ Download PNG</button></div>
+      <div class="chart" id="chartNewUsers"></div>
+      <div class="legend" id="legendNewUsers"></div>
+    </section>
+  </div>
+
+  <script>
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwzvrRCMrWrQkwXXo0tH0z7hUv3jUPtBnTWmm79KuN4w35RvhKkza8GUEQljqNbetav/exec';
+    const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSIOGb5RBMnQiQ-GiHtkOn5qQhGhQnUmCsVie-jSv6UhvMihSQv1JN03Tr1EtoTIfbLThkSgGzNdwqc/pub?output=csv';
+
+    const headers = [
+      'Timestamp','Unique User ID','First Visit DateTime','Last Visit DateTime','Last Exit DateTime','Last Visited Duration (minutes)','Total Visited Duration (minutes)','Total Visit Count','Device Type','Device Model / Name','Browser / WebView Info','Screen Resolution / Ratio','Timezone','IP Address','Country','City','Location (Latitude, Longitude)','Last Visited Page / Section Name','App Entry Time','App Exit Time','Live Status Icon','User Status (Text)','Days Since Last Visit','Account Age (Days)','Repeat Visit Type','Total Sessions','Active Period Range','Source (optional)','Notes / Admin Tag'
+    ];
+
+    const fmtCompact = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 });
+
+    let ALL_ROWS = [];
+    let CURRENT_FILTERED = [];
+    let AUTO_TIMER = null;
+
+    function parseDate(s) { const d = new Date(s); return isNaN(d) ? null : d; }
+
+    function classify(row){
+      const now = new Date();
+      const first = parseDate(row['First Visit DateTime']);
+      const last = parseDate(row['Last Visit DateTime']);
+      const minutesSinceLast = last ? (now - last)/60000 : Infinity;
+      const daysSinceLast = last ? (now - last)/86400000 : Infinity;
+      const accountAgeDays = first ? Math.max(0, Math.floor((now - first)/86400000)) : Infinity;
+      const live = last && minutesSinceLast <= 5; // heuristic
+      const within12h = last && (now - last) <= 12*60*60*1000;
+      const within24h = last && (now - last) <= 24*60*60*1000;
+      const active = daysSinceLast <= 30;
+      const inactive = !isFinite(daysSinceLast) ? false : daysSinceLast > 30;
+      const isNew = isFinite(accountAgeDays) && accountAgeDays <= 15;
+      let icon = '🔴';
+      if (live) icon = '🟢';
+      else if (isNew) icon = '🆕';
+      else if (within24h) icon = '🔵';
+      else if (active) icon = '🟣';
+      const status = live ? 'Live' : (isNew ? 'New' : (active ? 'Active' : 'Inactive'));
+      return { live, within12h, within24h, active, inactive, isNew, icon, status };
+    }
+
+    async function fetchRows(){
+      // Try fetch JSON, then JSONP, then CSV
+      try {
+        const r = await fetch(APPS_SCRIPT_URL + '?action=rows');
+        if (!r.ok) throw new Error('apps script rows failed');
+        const j = await r.json();
+        if (!Array.isArray(j.rows)) throw new Error('invalid rows json');
+        return j.rows;
+      } catch (e1) {
+        try {
+          const j = await fetchRowsJsonp();
+          if (!Array.isArray(j.rows)) throw new Error('invalid jsonp rows');
+          return j.rows;
+        } catch (e2) {
+          const r = await fetch(CSV_URL);
+          const txt = await r.text();
+          const lines = txt.split(/\r?\n/).filter(Boolean);
+          const head = lines.shift().split(',');
+          return lines.map(line => {
+            const cols = parseCsvLine(line);
+            const obj = {}; head.forEach((h, i) => obj[h.trim()] = (cols[i] ?? '').trim());
+            return obj;
+          });
+        }
+      }
+    }
+
+    function fetchRowsJsonp(timeoutMs = 9000){
+      return new Promise((resolve, reject) => {
+        const cbName = 'dashRowsCb_' + Math.random().toString(36).slice(2);
+        const cleanup = (script) => { try { delete window[cbName]; } catch {} if (script && script.parentNode) script.parentNode.removeChild(script); };
+        window[cbName] = (data) => { cleanup(script); resolve(data || { rows: [] }); };
+        const script = document.createElement('script');
+        script.src = APPS_SCRIPT_URL + '?action=rows&callback=' + cbName;
+        script.async = true;
+        script.onerror = () => { cleanup(script); reject(new Error('jsonp error')); };
+        document.body.appendChild(script);
+        setTimeout(() => { cleanup(script); reject(new Error('jsonp timeout')); }, timeoutMs);
+      });
+    }
+
+    function parseCsvLine(line){
+      const out = []; let cur = ''; let inQ = false;
+      for (let i=0; i<line.length; i++){
+        const ch = line[i];
+        if (ch === '"'){
+          if (inQ && line[i+1] === '"'){ cur += '"'; i++; }
+          else inQ = !inQ;
+        } else if (ch === ',' && !inQ){ out.push(cur); cur = ''; }
+        else cur += ch;
+      }
+      out.push(cur); return out;
+    }
+
+    function withinRange(row, range){
+      const now = new Date();
+      if (range === 'all') return true;
+      const last = parseDate(row['Last Visit DateTime']);
+      if (!last) return false;
+      if (range === '12h') return (now - last) <= 12*60*60*1000;
+      if (range === '24h') return (now - last) <= 24*60*60*1000;
+      const map = { '7d': 7, '15d': 15, '30d': 30 };
+      if (range in map){ return (now - last) <= map[range]*86400000; }
+      const monthsToDays = { '3m': 90, '6m': 180, '12m': 365 };
+      if (range in monthsToDays){ return (now - last) <= monthsToDays[range]*86400000; }
+      const yearsToDays = { '1y': 365, '3y': 365*3, '6y': 365*6, '12y': 365*12 };
+      if (range in yearsToDays){ return (now - last) <= yearsToDays[range]*86400000; }
+      return true;
+    }
+
+    function filterRows(rows){
+      const range = document.getElementById('range').value;
+      const status = document.getElementById('status').value;
+      const country = document.getElementById('countrySelect').value.trim().toLowerCase();
+      const city = document.getElementById('citySelect').value.trim().toLowerCase();
+      const ip = document.getElementById('ipSelect').value.trim().toLowerCase();
+      const tsSel = document.getElementById('timestampSelect').value.trim();
+      const dateFrom = document.getElementById('dateFrom').value;
+      const dateTo = document.getElementById('dateTo').value;
+      const q = (document.getElementById('quickSearch').value || '').trim().toLowerCase();
+
+      return rows.filter(r => {
+        if (!withinRange(r, range)) return false;
+        if (!matchesStatus(r, status)) return false;
+        if (country && (r['Country']||'').toLowerCase() !== country) return false;
+        if (city && (r['City']||'').toLowerCase() !== city) return false;
+        if (ip && (r['IP Address']||'').toLowerCase() !== ip) return false;
+        if (tsSel && (r['Timestamp']||'') !== tsSel) return false;
+        if (dateFrom || dateTo){
+          const last = parseDate(r['Last Visit DateTime']);
+          if (!last) return false;
+          if (dateFrom){ const dF = new Date(dateFrom + 'T00:00:00'); if (last < dF) return false; }
+          if (dateTo){ const dT = new Date(dateTo + 'T23:59:59'); if (last > dT) return false; }
+        }
+        if (q){
+          const hay = [r['Unique User ID'], r['IP Address'], r['City'], r['Country'], r['User Status (Text)'], r['Last Visit DateTime'], r['Device Model / Name'], r['Timezone']].map(x => (x||'').toString().toLowerCase());
+          if (!hay.some(x => x.includes(q))) return false;
+        }
+        return true;
+      });
+    }
+
+    function matchesStatus(row, status){
+      const c = classify(row);
+      if (status === 'any') return true;
+      if (status === 'live') return c.live;
+      if (status === 'active') return c.active;
+      if (status === 'inactive') return c.inactive;
+      if (status === 'new') return c.isNew;
+      if (status === '24h') return c.within24h;
+      return true;
+    }
+
+    function updateKpis(rows){
+      const total = rows.length;
+      let live=0, active=0, inactive=0, isNew=0, within12h=0, within24h=0, visits=0;
+      for (const r of rows){
+        const c = classify(r);
+        if (c.live) live++;
+        if (c.active) active++;
+        if (c.inactive) inactive++;
+        if (c.isNew) isNew++;
+        if (c.within12h) within12h++;
+        if (c.within24h) within24h++;
+        visits += Number(r['Total Visit Count']||r['Total Sessions']||0);
+      }
+      document.getElementById('kpiTotal').textContent = fmtCompact.format(total);
+      document.getElementById('kpiLive').textContent = fmtCompact.format(live);
+      document.getElementById('kpiActive').textContent = fmtCompact.format(active);
+      document.getElementById('kpiInactive').textContent = fmtCompact.format(inactive);
+      document.getElementById('kpiNew').textContent = fmtCompact.format(isNew);
+      document.getElementById('kpi12h').textContent = fmtCompact.format(within12h);
+      document.getElementById('kpi24h').textContent = fmtCompact.format(within24h);
+      document.getElementById('kpiVisits').textContent = fmtCompact.format(visits);
+    }
+
+    function renderTable(rows){
+      const tbody = document.getElementById('usersBody');
+      tbody.innerHTML = '';
+      const sorted = rows.slice().sort((a,b) => {
+        const ad = parseDate(a['Last Visit DateTime']);
+        const bd = parseDate(b['Last Visit DateTime']);
+        return (bd?.getTime()||0) - (ad?.getTime()||0);
+      });
+      const frag = document.createDocumentFragment();
+      for (const r of sorted){
+        const c = classify(r);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><span class="muted">${escapeHtml(r['Unique User ID']||'')}</span></td>
+          <td>${escapeHtml(r['Timestamp']||'')}</td>
+          <td>${escapeHtml(r['IP Address']||'')}</td>
+          <td>${escapeHtml(r['City']||'')}</td>
+          <td>${escapeHtml(r['Country']||'')}</td>
+          <td>${escapeHtml(r['Last Visit DateTime']||'')}</td>
+          <td>${escapeHtml(r['First Visit DateTime']||'')}</td>
+          <td>${escapeHtml(r['Device Model / Name']||'')}</td>
+          <td>${escapeHtml(r['Screen Resolution / Ratio']||'')}</td>
+          <td>${escapeHtml(r['Timezone']||'')}</td>
+          <td>${fmtCompact.format(Number(r['Total Sessions']||r['Total Visit Count']||0))}</td>
+          <td>${fmtCompact.format(Number(r['Total Visit Count']||r['Total Sessions']||0))}</td>
+          <td title="${c.status}"><span class="chip">${c.icon}</span></td>
+        `;
+        frag.appendChild(tr);
+      }
+      tbody.appendChild(frag);
+    }
+
+    function renderCards(rows){
+      const box = document.getElementById('usersCards');
+      box.innerHTML = '';
+      const sorted = rows.slice().sort((a,b) => {
+        const ad = parseDate(a['Last Visit DateTime']);
+        const bd = parseDate(b['Last Visit DateTime']);
+        return (bd?.getTime()||0) - (ad?.getTime()||0);
+      });
+      const frag = document.createDocumentFragment();
+      for (const r of sorted){
+        const c = classify(r);
+        const el = document.createElement('div');
+        el.className = 'card';
+        el.innerHTML = `
+          <div class="card-row"><div class="card-key">User ID</div><div class="card-val muted">${escapeHtml(r['Unique User ID']||'')}</div></div>
+          <div class="card-row"><div class="card-key">Timestamp</div><div class="card-val">${escapeHtml(r['Timestamp']||'')}</div></div>
+          <div class="card-row"><div class="card-key">IP</div><div class="card-val">${escapeHtml(r['IP Address']||'')}</div></div>
+          <div class="card-row"><div class="card-key">City</div><div class="card-val">${escapeHtml(r['City']||'')}</div></div>
+          <div class="card-row"><div class="card-key">Country</div><div class="card-val">${escapeHtml(r['Country']||'')}</div></div>
+          <div class="card-row"><div class="card-key">Last Visited</div><div class="card-val">${escapeHtml(r['Last Visit DateTime']||'')}</div></div>
+          <div class="card-row"><div class="card-key">First Visit</div><div class="card-val">${escapeHtml(r['First Visit DateTime']||'')}</div></div>
+          <div class="card-row"><div class="card-key">Device Model</div><div class="card-val">${escapeHtml(r['Device Model / Name']||'')}</div></div>
+          <div class="card-row"><div class="card-key">Screen</div><div class="card-val">${escapeHtml(r['Screen Resolution / Ratio']||'')}</div></div>
+          <div class="card-row"><div class="card-key">Timezone</div><div class="card-val">${escapeHtml(r['Timezone']||'')}</div></div>
+          <div class="card-row"><div class="card-key">Total Sessions</div><div class="card-val">${fmtCompact.format(Number(r['Total Sessions']||r['Total Visit Count']||0))}</div></div>
+          <div class="card-row"><div class="card-key">Total Visits</div><div class="card-val">${fmtCompact.format(Number(r['Total Visit Count']||r['Total Sessions']||0))}</div></div>
+          <div class="card-row"><div class="card-key">Status</div><div class="card-val"><span class="chip">${c.icon}</span> ${c.status}</div></div>
+        `;
+        frag.appendChild(el);
+      }
+      box.appendChild(frag);
+    }
+
+    function renderActivenessComparison(rows){
+      const el = document.getElementById('chartActiveness');
+      const legend = document.getElementById('legendActiveness');
+      el.innerHTML = ''; legend.innerHTML = '';
+      const now = new Date();
+      const windows = [
+        { key: 'today', label: 'Today', color: getCss('--today'), match: (d) => sameDay(d, now) },
+        { key: 'yday', label: 'Yesterday', color: getCss('--yday'), match: (d) => sameDay(d, addDays(now, -1)) },
+        { key: '7d', label: '7d', color: getCss('--d7'), match: (d) => (now - d) <= 7*86400000 },
+        { key: '15d', label: '15d', color: getCss('--d15'), match: (d) => (now - d) <= 15*86400000 },
+        { key: '30d', label: '30d', color: getCss('--d30'), match: (d) => (now - d) <= 30*86400000 },
+        { key: '3m', label: '3m', color: getCss('--m3'), match: (d) => (now - d) <= 90*86400000 },
+        { key: '6m', label: '6m', color: getCss('--m6'), match: (d) => (now - d) <= 180*86400000 },
+        { key: '1y', label: '1y', color: getCss('--y1'), match: (d) => (now - d) <= 365*86400000 },
+      ];
+      const counts = windows.map(w => rows.reduce((acc, r) => { const d = parseDate(r['Last Visit DateTime']); return d && w.match(d) ? acc+1 : acc; }, 0));
+      const max = Math.max(1, ...counts);
+      windows.forEach((w, i) => {
+        const bar = document.createElement('div');
+        bar.className = 'bar';
+        bar.style.height = Math.max(8, Math.round((counts[i]/max)*160)) + 'px';
+        bar.style.background = `linear-gradient(180deg, ${w.color}, ${hexToRgba(w.color, .35)})`;
+        bar.dataset.label = w.label;
+        bar.setAttribute('data-color', w.color);
+        bar.title = `${fmtCompact.format(counts[i])} active users`;
+        el.appendChild(bar);
+        const li = document.createElement('div'); li.className = 'legend-item'; li.innerHTML = `<span class="swatch" style="background:${w.color}"></span><span>${w.label}</span>`; legend.appendChild(li);
+      });
+    }
+
+    function renderNewUsersComparison(rows){
+      const el = document.getElementById('chartNewUsers');
+      const legend = document.getElementById('legendNewUsers');
+      el.innerHTML = ''; legend.innerHTML = '';
+      const now = new Date();
+      const windows = [
+        { key: 'today', label: 'Today', color: getCss('--today'), match: (d) => sameDay(d, now) },
+        { key: 'yday', label: 'Yesterday', color: getCss('--yday'), match: (d) => sameDay(d, addDays(now, -1)) },
+        { key: '7d', label: '7d', color: getCss('--d7'), match: (d) => (now - d) <= 7*86400000 },
+        { key: '15d', label: '15d', color: getCss('--d15'), match: (d) => (now - d) <= 15*86400000 },
+        { key: '30d', label: '30d', color: getCss('--d30'), match: (d) => (now - d) <= 30*86400000 },
+        { key: '3m', label: '3m', color: getCss('--m3'), match: (d) => (now - d) <= 90*86400000 },
+        { key: '6m', label: '6m', color: getCss('--m6'), match: (d) => (now - d) <= 180*86400000 },
+        { key: '1y', label: '1y', color: getCss('--y1'), match: (d) => (now - d) <= 365*86400000 },
+      ];
+      const counts = windows.map(w => rows.reduce((acc, r) => { const d = parseDate(r['First Visit DateTime']); return d && w.match(d) ? acc+1 : acc; }, 0));
+      const max = Math.max(1, ...counts);
+      windows.forEach((w, i) => {
+        const bar = document.createElement('div');
+        bar.className = 'bar';
+        bar.style.height = Math.max(8, Math.round((counts[i]/max)*160)) + 'px';
+        bar.style.background = `linear-gradient(180deg, ${w.color}, ${hexToRgba(w.color, .35)})`;
+        bar.dataset.label = w.label;
+        bar.setAttribute('data-color', w.color);
+        bar.title = `${fmtCompact.format(counts[i])} new users`;
+        el.appendChild(bar);
+        const li = document.createElement('div'); li.className = 'legend-item'; li.innerHTML = `<span class="swatch" style="background:${w.color}"></span><span>${w.label}</span>`; legend.appendChild(li);
+      });
+    }
+
+    function addDays(d, n){ const x = new Date(d); x.setDate(x.getDate()+n); return x; }
+    function sameDay(a,b){ return a && b && a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate(); }
+    function hexToRgba(hex, a){
+      try {
+        const m = hex.replace('#','');
+        const bigint = parseInt(m, 16);
+        const r = (bigint >> 16) & 255, g = (bigint >> 8) & 255, b = bigint & 255;
+        return `rgba(${r}, ${g}, ${b}, ${a})`;
+      } catch { return hex }
+    }
+    function getCss(varName){ return getComputedStyle(document.documentElement).getPropertyValue(varName).trim() || '#8b5cf6'; }
+
+    function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
+
+    function wireUi(rows){
+      const inputs = ['range','status','countrySelect','citySelect','ipSelect','timestampSelect','dateFrom','dateTo','quickSearch'].map(id => document.getElementById(id));
+      for (const el of inputs){ el.addEventListener('input', () => refresh(rows)); }
+      document.querySelectorAll('.tab').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.tab').forEach(x => x.setAttribute('aria-selected','false'));
+          btn.setAttribute('aria-selected','true');
+          document.getElementById('status').value = btn.dataset.tab;
+          refresh(rows);
+        });
+      });
+      document.querySelectorAll('.kpi[data-open]').forEach(card => {
+        card.addEventListener('click', () => {
+          const key = card.getAttribute('data-open');
+          const statusEl = document.getElementById('status');
+          if (['all','live','active','inactive','new','24h'].includes(key)){
+            statusEl.value = key === 'all' ? 'any' : key;
+          } else if (key === '12h') {
+            document.getElementById('range').value = '12h';
+          }
+          document.querySelectorAll('.tab').forEach(x => x.setAttribute('aria-selected','false'));
+          const match = document.querySelector(`.tab[data-tab="${statusEl.value}"]`);
+          if (match) match.setAttribute('aria-selected','true');
+          refresh(rows);
+        });
+      });
+      // Export buttons
+      const doCsv = () => exportCSV(CURRENT_FILTERED);
+      const doJson = () => exportJSON(CURRENT_FILTERED);
+      document.getElementById('exportCsv').addEventListener('click', doCsv);
+      document.getElementById('exportJson').addEventListener('click', doJson);
+      document.getElementById('exportCsv2').addEventListener('click', doCsv);
+      document.getElementById('exportJson2').addEventListener('click', doJson);
+      // Reset
+      document.getElementById('resetFilters').addEventListener('click', resetFilters);
+      // Auto-refresh toggle and interval
+      const toggle = document.getElementById('autoRefreshToggle');
+      const label = document.getElementById('autoRefreshLabel');
+      const intervalSel = document.getElementById('refreshInterval');
+      const updateTitle = () => { label.title = 'Auto-refresh every ' + Math.round((parseInt(intervalSel.value)||30000)/1000) + 's'; };
+      toggle.addEventListener('change', (e) => { if (e.target.checked) startAutoRefresh(); else stopAutoRefresh(); });
+      intervalSel.addEventListener('change', () => { updateTitle(); if (toggle.checked) startAutoRefresh(); });
+      updateTitle();
+      // Chart downloads
+      document.getElementById('dlActiveness').addEventListener('click', () => downloadChartImage(document.getElementById('chartActiveness'), 'activeness_' + Date.now() + '.png'));
+      document.getElementById('dlNewUsers').addEventListener('click', () => downloadChartImage(document.getElementById('chartNewUsers'), 'new_users_' + Date.now() + '.png'));
+    }
+
+    function populateFilters(rows){
+      const unique = (arr) => Array.from(new Set(arr.filter(Boolean)) ).sort((a,b)=>a.localeCompare(b));
+      const countries = unique(rows.map(r => r['Country']||'').map(s=>s.trim()).filter(Boolean));
+      const cities = unique(rows.map(r => r['City']||'').map(s=>s.trim()).filter(Boolean));
+      const ips = unique(rows.map(r => r['IP Address']||'').map(s=>s.trim()).filter(Boolean));
+      const timestamps = unique(rows.map(r => r['Timestamp']||'').map(s=>s.trim()).filter(Boolean));
+
+      const fill = (id, list, anyLabel) => {
+        const sel = document.getElementById(id); sel.innerHTML = `<option value="">${anyLabel}</option>` + list.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+      };
+      fill('countrySelect', countries, 'Country (Any)');
+      fill('citySelect', cities, 'City (Any)');
+      fill('ipSelect', ips, 'IP (Any)');
+      fill('timestampSelect', timestamps, 'Timestamp (Any)');
+    }
+
+    function resetFilters(){
+      document.getElementById('range').value = 'all';
+      document.getElementById('status').value = 'any';
+      document.getElementById('countrySelect').value = '';
+      document.getElementById('citySelect').value = '';
+      document.getElementById('ipSelect').value = '';
+      document.getElementById('timestampSelect').value = '';
+      document.getElementById('dateFrom').value = '';
+      document.getElementById('dateTo').value = '';
+      document.getElementById('quickSearch').value = '';
+      document.querySelectorAll('.tab').forEach(x => x.setAttribute('aria-selected','false'));
+      const allTab = document.querySelector('.tab[data-tab="all"]'); if (allTab) allTab.setAttribute('aria-selected','true');
+      refresh(ALL_ROWS);
+    }
+
+    function startAutoRefresh(){
+      stopAutoRefresh();
+      const interval = parseInt(document.getElementById('refreshInterval').value) || 30000;
+      document.getElementById('autoRefreshLabel').title = 'Auto-refresh every ' + Math.round(interval/1000) + 's';
+      AUTO_TIMER = setInterval(async () => {
+        try {
+          const saved = {
+            country: document.getElementById('countrySelect').value,
+            city: document.getElementById('citySelect').value,
+            ip: document.getElementById('ipSelect').value,
+            ts: document.getElementById('timestampSelect').value,
+          };
+          const rows = await fetchRows();
+          ALL_ROWS = rows;
+          populateFilters(rows);
+          // restore selections
+          const setSel = (id, val) => { const el = document.getElementById(id); if (val && window.CSS && CSS.escape && el.querySelector(`option[value="${CSS.escape(val)}"]`)) el.value = val; };
+          setSel('countrySelect', saved.country);
+          setSel('citySelect', saved.city);
+          setSel('ipSelect', saved.ip);
+          setSel('timestampSelect', saved.ts);
+          refresh(rows);
+        } catch (e) { /* ignore */ }
+      }, interval);
+    }
+
+    function stopAutoRefresh(){ if (AUTO_TIMER) { clearInterval(AUTO_TIMER); AUTO_TIMER = null; } }
+
+    function refresh(allRows){
+      CURRENT_FILTERED = filterRows(allRows);
+      updateKpis(CURRENT_FILTERED);
+      renderTable(CURRENT_FILTERED);
+      renderCards(CURRENT_FILTERED);
+      renderActivenessComparison(CURRENT_FILTERED);
+      renderNewUsersComparison(CURRENT_FILTERED);
+      document.getElementById('lastUpdated')?.textContent = 'Updated ' + new Date().toLocaleString();
+    }
+
+    function exportJSON(rows){
+      const blob = new Blob([JSON.stringify(rows, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `users_${Date.now()}.json`; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    }
+
+    function exportCSV(rows){
+      if (!rows.length) { alert('No rows to export'); return; }
+      const cols = headers;
+      const csv = [cols.join(',')].concat(rows.map(r => cols.map(h => csvEscape(r[h])).join(','))).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `users_${Date.now()}.csv`; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    }
+
+    function csvEscape(v){
+      const s = (v==null ? '' : String(v));
+      if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+      return s;
+    }
+
+    function downloadChartImage(chartEl, filename){
+      if (!chartEl) return;
+      const rect = chartEl.getBoundingClientRect();
+      const scale = window.devicePixelRatio || 2;
+      const width = Math.max(320, Math.round(rect.width));
+      const height = Math.round(rect.height + 28);
+      const canvas = document.createElement('canvas');
+      canvas.width = width * scale; canvas.height = height * scale;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(scale, scale);
+      // background
+      ctx.fillStyle = '#0e0f13';
+      ctx.fillRect(0, 0, width, height);
+      const bars = Array.from(chartEl.querySelectorAll('.bar'));
+      for (const b of bars){
+        const br = b.getBoundingClientRect();
+        const x = Math.round(br.left - rect.left);
+        const y = Math.round(br.top - rect.top);
+        const w = Math.round(br.width);
+        const h = Math.round(br.height);
+        const color = b.getAttribute('data-color') || '#8b5cf6';
+        ctx.fillStyle = color; ctx.fillRect(x, y, w, h);
+      }
+      // labels at bottom
+      ctx.font = '12px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+      ctx.fillStyle = '#9aa3ad';
+      for (const b of bars){
+        const br = b.getBoundingClientRect();
+        const label = b.getAttribute('data-label') || '';
+        const textWidth = ctx.measureText(label).width;
+        const cx = Math.round((br.left - rect.left) + br.width/2 - textWidth/2);
+        const cy = height - 8;
+        ctx.fillText(label, cx, cy);
+      }
+      canvas.toBlob(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = filename; a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+      }, 'image/png');
+    }
+
+    (async function init(){
+      try {
+        ALL_ROWS = await fetchRows();
+        populateFilters(ALL_ROWS);
+        wireUi(ALL_ROWS);
+        refresh(ALL_ROWS);
+      } catch (e) {
+        document.getElementById('lastUpdated')?.textContent = 'Failed to load data';
+      }
+    })();
+  </script>
+</body>
+</html>
