@@ -43,9 +43,16 @@
     .badge { display: inline-grid; place-items: center; width: 1.9rem; height: 1.9rem; border-radius: .6rem; background: linear-gradient(135deg, var(--accent), #6d28d9); box-shadow: 0 8px 20px rgba(124,58,237,.35); animation: float 4s ease-in-out infinite; }
     @keyframes float { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-3px) } }
 
-    .actions { display: flex; gap: .5rem; flex-wrap: wrap; }
+    .actions { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
     .btn { appearance: none; border: 1px solid rgba(255,255,255,.12); background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.04)); color: var(--fg); border-radius: .7rem; padding: .5rem .75rem; font-weight: 800; cursor: pointer; box-shadow: var(--shadow); }
     .btn:hover { border-color: rgba(124,58,237,.35); }
+
+    .toggle { display: inline-flex; align-items: center; gap: .5rem; font-weight: 800; }
+    .toggle input { position: absolute; opacity: 0; pointer-events: none; }
+    .track { width: 44px; height: 24px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); border-radius: 999px; position: relative; box-shadow: inset 0 -12px 20px rgba(255,255,255,.03); }
+    .thumb { position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 999px; background: #e5e7eb; transition: transform .18s ease, background .18s ease, box-shadow .18s ease; box-shadow: 0 4px 10px rgba(0,0,0,.25); }
+    .toggle input:checked + .track { border-color: rgba(124,58,237,.55); background: rgba(124,58,237,.25); }
+    .toggle input:checked + .track .thumb { transform: translateX(20px); background: #8b5cf6; }
 
     .section { display: grid; gap: .75rem; padding: 1rem; border-radius: var(--radius); background: linear-gradient(180deg, var(--panel-2), var(--panel)); border: 1px solid rgba(255,255,255,.08); box-shadow: var(--shadow); }
     .section-title { font-weight: 900; letter-spacing: .3px; display: flex; align-items: center; gap: .6rem; }
@@ -111,6 +118,12 @@
       <div class="brand"><div class="badge">📊</div> <div>x.plus.bd — Users Dashboard</div></div>
       <div class="actions">
         <input id="quickSearch" class="control" placeholder="Quick search (User ID, IP, City, Country)" style="min-width: 14rem;" />
+        <label class="toggle" title="Auto-refresh every 30s">
+          <input id="autoRefreshToggle" type="checkbox" />
+          <span class="track"><span class="thumb"></span></span>
+          <span>Auto-refresh</span>
+        </label>
+        <button id="resetFilters" class="btn" type="button">↺ Reset Filters</button>
         <button id="exportCsv" class="btn" type="button">⬇️ Export CSV</button>
         <button id="exportJson" class="btn" type="button">⬇️ Export JSON</button>
       </div>
@@ -243,6 +256,11 @@
               <th>City</th>
               <th>Country</th>
               <th>Last Visited</th>
+              <th>First Visit</th>
+              <th>Device Model</th>
+              <th>Screen</th>
+              <th>Timezone</th>
+              <th>Total Sessions</th>
               <th>Total Visits</th>
               <th>Status</th>
             </tr>
@@ -280,6 +298,7 @@
 
     let ALL_ROWS = [];
     let CURRENT_FILTERED = [];
+    let AUTO_TIMER = null;
 
     function parseDate(s) { const d = new Date(s); return isNaN(d) ? null : d; }
 
@@ -379,7 +398,7 @@
           if (dateTo){ const dT = new Date(dateTo + 'T23:59:59'); if (last > dT) return false; }
         }
         if (q){
-          const hay = [r['Unique User ID'], r['IP Address'], r['City'], r['Country'], r['User Status (Text)'], r['Last Visit DateTime']].map(x => (x||'').toString().toLowerCase());
+          const hay = [r['Unique User ID'], r['IP Address'], r['City'], r['Country'], r['User Status (Text)'], r['Last Visit DateTime'], r['Device Model / Name'], r['Timezone']].map(x => (x||'').toString().toLowerCase());
           if (!hay.some(x => x.includes(q))) return false;
         }
         return true;
@@ -439,6 +458,11 @@
           <td>${escapeHtml(r['City']||'')}</td>
           <td>${escapeHtml(r['Country']||'')}</td>
           <td>${escapeHtml(r['Last Visit DateTime']||'')}</td>
+          <td>${escapeHtml(r['First Visit DateTime']||'')}</td>
+          <td>${escapeHtml(r['Device Model / Name']||'')}</td>
+          <td>${escapeHtml(r['Screen Resolution / Ratio']||'')}</td>
+          <td>${escapeHtml(r['Timezone']||'')}</td>
+          <td>${fmtCompact.format(Number(r['Total Sessions']||r['Total Visit Count']||0))}</td>
           <td>${fmtCompact.format(Number(r['Total Visit Count']||r['Total Sessions']||0))}</td>
           <td title="${c.status}"><span class="chip">${c.icon}</span></td>
         `;
@@ -467,6 +491,11 @@
           <div class="card-row"><div class="card-key">City</div><div class="card-val">${escapeHtml(r['City']||'')}</div></div>
           <div class="card-row"><div class="card-key">Country</div><div class="card-val">${escapeHtml(r['Country']||'')}</div></div>
           <div class="card-row"><div class="card-key">Last Visited</div><div class="card-val">${escapeHtml(r['Last Visit DateTime']||'')}</div></div>
+          <div class="card-row"><div class="card-key">First Visit</div><div class="card-val">${escapeHtml(r['First Visit DateTime']||'')}</div></div>
+          <div class="card-row"><div class="card-key">Device Model</div><div class="card-val">${escapeHtml(r['Device Model / Name']||'')}</div></div>
+          <div class="card-row"><div class="card-key">Screen</div><div class="card-val">${escapeHtml(r['Screen Resolution / Ratio']||'')}</div></div>
+          <div class="card-row"><div class="card-key">Timezone</div><div class="card-val">${escapeHtml(r['Timezone']||'')}</div></div>
+          <div class="card-row"><div class="card-key">Total Sessions</div><div class="card-val">${fmtCompact.format(Number(r['Total Sessions']||r['Total Visit Count']||0))}</div></div>
           <div class="card-row"><div class="card-key">Total Visits</div><div class="card-val">${fmtCompact.format(Number(r['Total Visit Count']||r['Total Sessions']||0))}</div></div>
           <div class="card-row"><div class="card-key">Status</div><div class="card-val"><span class="chip">${c.icon}</span> ${c.status}</div></div>
         `;
@@ -580,6 +609,12 @@
       document.getElementById('exportJson').addEventListener('click', doJson);
       document.getElementById('exportCsv2').addEventListener('click', doCsv);
       document.getElementById('exportJson2').addEventListener('click', doJson);
+      // Reset
+      document.getElementById('resetFilters').addEventListener('click', resetFilters);
+      // Auto-refresh
+      document.getElementById('autoRefreshToggle').addEventListener('change', (e) => {
+        if (e.target.checked) startAutoRefresh(); else stopAutoRefresh();
+      });
     }
 
     function populateFilters(rows){
@@ -598,6 +633,49 @@
       fill('timestampSelect', timestamps, 'Timestamp (Any)');
     }
 
+    function resetFilters(){
+      document.getElementById('range').value = 'all';
+      document.getElementById('status').value = 'any';
+      document.getElementById('countrySelect').value = '';
+      document.getElementById('citySelect').value = '';
+      document.getElementById('ipSelect').value = '';
+      document.getElementById('timestampSelect').value = '';
+      document.getElementById('dateFrom').value = '';
+      document.getElementById('dateTo').value = '';
+      document.getElementById('quickSearch').value = '';
+      document.querySelectorAll('.tab').forEach(x => x.setAttribute('aria-selected','false'));
+      const allTab = document.querySelector('.tab[data-tab="all"]'); if (allTab) allTab.setAttribute('aria-selected','true');
+      refresh(ALL_ROWS);
+    }
+
+    function startAutoRefresh(){
+      stopAutoRefresh();
+      AUTO_TIMER = setInterval(async () => {
+        try {
+          const saved = {
+            country: document.getElementById('countrySelect').value,
+            city: document.getElementById('citySelect').value,
+            ip: document.getElementById('ipSelect').value,
+            ts: document.getElementById('timestampSelect').value,
+          };
+          const rows = await fetchRows();
+          ALL_ROWS = rows;
+          populateFilters(rows);
+          // restore selections
+          const setSel = (id, val) => { const el = document.getElementById(id); if (val && el.querySelector(`option[value="${CSS.escape(val)}"]`)) el.value = val; };
+          if (window.CSS && CSS.escape){
+            setSel('countrySelect', saved.country);
+            setSel('citySelect', saved.city);
+            setSel('ipSelect', saved.ip);
+            setSel('timestampSelect', saved.ts);
+          }
+          refresh(rows);
+        } catch (e) { /* ignore */ }
+      }, 30000);
+    }
+
+    function stopAutoRefresh(){ if (AUTO_TIMER) { clearInterval(AUTO_TIMER); AUTO_TIMER = null; } }
+
     function refresh(allRows){
       CURRENT_FILTERED = filterRows(allRows);
       updateKpis(CURRENT_FILTERED);
@@ -605,7 +683,7 @@
       renderCards(CURRENT_FILTERED);
       renderActivenessComparison(CURRENT_FILTERED);
       renderNewUsersComparison(CURRENT_FILTERED);
-      document.getElementById('lastUpdated').textContent = 'Updated ' + new Date().toLocaleString();
+      document.getElementById('lastUpdated')?.textContent = 'Updated ' + new Date().toLocaleString();
     }
 
     function exportJSON(rows){
@@ -640,7 +718,7 @@
         wireUi(ALL_ROWS);
         refresh(ALL_ROWS);
       } catch (e) {
-        document.getElementById('lastUpdated').textContent = 'Failed to load data';
+        document.getElementById('lastUpdated')?.textContent = 'Failed to load data';
       }
     })();
   </script>
