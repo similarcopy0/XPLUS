@@ -26,6 +26,7 @@
       --grad-1: radial-gradient(1200px 600px at 10% -10%, rgba(124,58,237,.16), transparent);
       --grad-2: radial-gradient(800px 400px at 110% 10%, rgba(56,189,248,.12), transparent);
       --grad-3: radial-gradient(600px 600px at -10% 120%, rgba(34,197,94,.12), transparent);
+      --today: #8b5cf6; --yday: #60a5fa; --d7: #22c55e; --d15: #f59e0b; --d30: #ef4444; --m3: #14b8a6; --m6: #f472b6; --y1: #a78bfa;
     }
     html, body {
       margin: 0; color: var(--fg); font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, "Helvetica Neue", Arial;
@@ -42,26 +43,32 @@
     .badge { display: inline-grid; place-items: center; width: 1.9rem; height: 1.9rem; border-radius: .6rem; background: linear-gradient(135deg, var(--accent), #6d28d9); box-shadow: 0 8px 20px rgba(124,58,237,.35); animation: float 4s ease-in-out infinite; }
     @keyframes float { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-3px) } }
 
+    .actions { display: flex; gap: .5rem; flex-wrap: wrap; }
+    .btn { appearance: none; border: 1px solid rgba(255,255,255,.12); background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.04)); color: var(--fg); border-radius: .7rem; padding: .5rem .75rem; font-weight: 800; cursor: pointer; box-shadow: var(--shadow); }
+    .btn:hover { border-color: rgba(124,58,237,.35); }
+
     .section { display: grid; gap: .75rem; padding: 1rem; border-radius: var(--radius); background: linear-gradient(180deg, var(--panel-2), var(--panel)); border: 1px solid rgba(255,255,255,.08); box-shadow: var(--shadow); }
     .section-title { font-weight: 900; letter-spacing: .3px; display: flex; align-items: center; gap: .6rem; }
     .section-sub { color: var(--muted); font-weight: 600; }
 
-    .filters { display: grid; grid-template-columns: repeat(12, 1fr); gap: .75rem; }
-    .filter { grid-column: span 3; min-width: 0; }
-    @media (max-width: 900px) { .filter { grid-column: span 6; } }
-    @media (max-width: 600px) { .filter { grid-column: span 12; } }
-    .control { width: 100%; background: var(--panel); border: 1px solid rgba(255,255,255,.12); color: var(--fg); border-radius: .75rem; padding: .75rem .9rem; font-weight: 600; box-shadow: inset 0 -20px 35px rgba(255,255,255,.02); }
+    .filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
+    @media (max-width: 700px) { .filters { grid-template-columns: 1fr; } }
 
-    .kpis-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: .75rem; }
-    .kpi { grid-column: span 3; min-width: 0; padding: 1rem; border-radius: var(--radius); background: linear-gradient(180deg, var(--panel-3), var(--panel)); border: 1px solid rgba(255,255,255,.08); box-shadow: var(--shadow); display: grid; gap: .35rem; cursor: pointer; transition: transform .15s ease, box-shadow .15s ease, border-color .2s ease; position: relative; overflow: hidden; }
+    .filter { position: relative; display: grid; gap: .35rem; }
+    .filter-label { display: flex; align-items: center; gap: .5rem; color: var(--muted); font-weight: 800; font-size: .85rem; }
+    .filter .icon { width: 1.2rem; height: 1.2rem; display: grid; place-items: center; border-radius: .4rem; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.08); }
+    .control { width: 100%; background: var(--panel); border: 1px solid rgba(255,255,255,.12); color: var(--fg); border-radius: .75rem; padding: .75rem .9rem; font-weight: 600; box-shadow: inset 0 -20px 35px rgba(255,255,255,.02); }
+    .control::placeholder { color: var(--muted); }
+
+    .kpis-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
+    @media (max-width: 700px) { .kpis-grid { grid-template-columns: 1fr; } }
+    .kpi { min-width: 0; padding: 1rem; border-radius: var(--radius); background: linear-gradient(180deg, var(--panel-3), var(--panel)); border: 1px solid rgba(255,255,255,.08); box-shadow: var(--shadow); display: grid; gap: .35rem; cursor: pointer; transition: transform .15s ease, box-shadow .15s ease, border-color .2s ease; position: relative; overflow: hidden; }
     .kpi::after { content: ""; position: absolute; inset: -40% -40% auto auto; height: 200%; width: 50%; background: radial-gradient(circle at 30% 50%, rgba(124,58,237,.25), transparent 60%); transform: rotate(25deg); filter: blur(12px); pointer-events: none; animation: shimmer 6s linear infinite; }
     @keyframes shimmer { 0% { transform: translateX(-40%) rotate(25deg) } 100% { transform: translateX(80%) rotate(25deg) } }
     .kpi:hover { transform: translateY(-2px); box-shadow: 0 14px 36px rgba(0,0,0,.45); border-color: rgba(124,58,237,.35); }
     .kpi-title { color: var(--muted); font-weight: 700; font-size: .9rem; }
     .kpi-value { font-size: 1.8rem; font-weight: 900; letter-spacing: .4px; }
     .kpi-sub { color: var(--muted-2); font-weight: 600; font-size: .85rem; }
-    @media (max-width: 900px) { .kpi { grid-column: span 6; } }
-    @media (max-width: 600px) { .kpi { grid-column: span 12; } }
 
     .list-head { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-bottom: .5rem; }
     .tabs { display: flex; gap: .5rem; flex-wrap: wrap; }
@@ -83,15 +90,16 @@
       .card-key { color: var(--muted); font-weight: 700; }
       .card-val { font-weight: 700; }
     }
-    @media (min-width: 721px) {
-      .cards { display: none; }
-    }
+    @media (min-width: 721px) { .cards { display: none; } }
 
     /* Charts */
-    .chart { display: grid; grid-template-columns: repeat(8, minmax(10px, 1fr)); gap: .5rem; align-items: end; height: 160px; }
-    .bar { background: linear-gradient(180deg, rgba(124,58,237,.85), rgba(124,58,237,.35)); border-radius: .35rem; box-shadow: 0 6px 16px rgba(124,58,237,.35); position: relative; }
+    .chart { display: grid; grid-template-columns: repeat(8, minmax(10px, 1fr)); gap: .5rem; align-items: end; height: 180px; }
+    .bar { border-radius: .35rem; box-shadow: 0 6px 16px rgba(124,58,237,.35); position: relative; }
     .bar::after { content: attr(data-label); position: absolute; bottom: -1.3rem; left: 50%; transform: translateX(-50%); color: var(--muted); font-size: .7rem; white-space: nowrap; }
     .chart-row { display: grid; gap: .4rem; }
+    .legend { display: flex; flex-wrap: wrap; gap: .5rem 1rem; margin-top: .35rem; }
+    .legend-item { display: inline-flex; align-items: center; gap: .4rem; color: var(--muted); font-weight: 700; font-size: .85rem; }
+    .swatch { width: .85rem; height: .85rem; border-radius: .2rem; box-shadow: inset 0 0 0 1px rgba(255,255,255,.15); }
 
     .muted { color: var(--muted); }
     .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
@@ -101,42 +109,70 @@
   <div class="wrap">
     <header class="topbar">
       <div class="brand"><div class="badge">📊</div> <div>x.plus.bd — Users Dashboard</div></div>
-      <div class="muted" id="lastUpdated">Loading…</div>
+      <div class="actions">
+        <input id="quickSearch" class="control" placeholder="Quick search (User ID, IP, City, Country)" style="min-width: 14rem;" />
+        <button id="exportCsv" class="btn" type="button">⬇️ Export CSV</button>
+        <button id="exportJson" class="btn" type="button">⬇️ Export JSON</button>
+      </div>
     </header>
 
     <section class="section" id="filtersSection">
       <div class="section-title">🔎 Filters</div>
       <div class="section-sub">Refine users by time, status, and attributes from sheet</div>
       <div class="filters">
-        <div class="filter"><select id="range" class="control" aria-label="Time range">
-          <option value="all">All time</option>
-          <option value="12h">Last 12 hours</option>
-          <option value="24h">Last 24 hours</option>
-          <option value="7d">Last 7 days</option>
-          <option value="15d">Last 15 days</option>
-          <option value="30d">Last 30 days</option>
-          <option value="3m">Last 3 months</option>
-          <option value="6m">Last 6 months</option>
-          <option value="12m">Last 12 months</option>
-          <option value="1y">Last 1 year</option>
-          <option value="3y">Last 3 years</option>
-          <option value="6y">Last 6 years</option>
-          <option value="12y">Last 12 years</option>
-        </select></div>
-        <div class="filter"><select id="status" class="control" aria-label="Status">
-          <option value="any">Any status</option>
-          <option value="live">Live / Online</option>
-          <option value="active">Active (≤ 30d)</option>
-          <option value="inactive">Inactive (> 30d)</option>
-          <option value="new">New (≤ 15d)</option>
-          <option value="24h">Visited in 24h</option>
-        </select></div>
-        <div class="filter"><select id="countrySelect" class="control" aria-label="Country"><option value="">Any country</option></select></div>
-        <div class="filter"><select id="citySelect" class="control" aria-label="City"><option value="">Any city</option></select></div>
-        <div class="filter"><select id="ipSelect" class="control" aria-label="IP"><option value="">Any IP</option></select></div>
-        <div class="filter"><input id="dateFrom" class="control" type="date" aria-label="Date from" /></div>
-        <div class="filter"><input id="dateTo" class="control" type="date" aria-label="Date to" /></div>
-        <div class="filter"><select id="timestampSelect" class="control" aria-label="Timestamp"><option value="">Any timestamp</option></select></div>
+        <div class="filter">
+          <div class="filter-label"><span class="icon">⏳</span><span>Time range</span></div>
+          <select id="range" class="control" aria-label="Time range">
+            <option value="all">Time Range (All)</option>
+            <option value="12h">Last 12 hours</option>
+            <option value="24h">Last 24 hours</option>
+            <option value="7d">Last 7 days</option>
+            <option value="15d">Last 15 days</option>
+            <option value="30d">Last 30 days</option>
+            <option value="3m">Last 3 months</option>
+            <option value="6m">Last 6 months</option>
+            <option value="12m">Last 12 months</option>
+            <option value="1y">Last 1 year</option>
+            <option value="3y">Last 3 years</option>
+            <option value="6y">Last 6 years</option>
+            <option value="12y">Last 12 years</option>
+          </select>
+        </div>
+        <div class="filter">
+          <div class="filter-label"><span class="icon">🧿</span><span>Status</span></div>
+          <select id="status" class="control" aria-label="Status">
+            <option value="any">Status (Any)</option>
+            <option value="live">Live / Online</option>
+            <option value="active">Active (≤ 30d)</option>
+            <option value="inactive">Inactive (> 30d)</option>
+            <option value="new">New (≤ 15d)</option>
+            <option value="24h">Visited in 24h</option>
+          </select>
+        </div>
+        <div class="filter">
+          <div class="filter-label"><span class="icon">🌍</span><span>Country</span></div>
+          <select id="countrySelect" class="control" aria-label="Country"><option value="">Country (Any)</option></select>
+        </div>
+        <div class="filter">
+          <div class="filter-label"><span class="icon">🏙️</span><span>City</span></div>
+          <select id="citySelect" class="control" aria-label="City"><option value="">City (Any)</option></select>
+        </div>
+        <div class="filter">
+          <div class="filter-label"><span class="icon">🔢</span><span>IP Address</span></div>
+          <select id="ipSelect" class="control" aria-label="IP"><option value="">IP (Any)</option></select>
+        </div>
+        <div class="filter">
+          <div class="filter-label"><span class="icon">🗓️</span><span>Date From</span></div>
+          <input id="dateFrom" class="control" type="date" aria-label="Date from" placeholder="From" />
+        </div>
+        <div class="filter">
+          <div class="filter-label"><span class="icon">🗓️</span><span>Date To</span></div>
+          <input id="dateTo" class="control" type="date" aria-label="Date to" placeholder="To" />
+        </div>
+        <div class="filter">
+          <div class="filter-label"><span class="icon">⏱️</span><span>Timestamp</span></div>
+          <select id="timestampSelect" class="control" aria-label="Timestamp"><option value="">Timestamp (Any)</option></select>
+        </div>
       </div>
     </section>
 
@@ -192,13 +228,9 @@
           <div style="font-weight:900;">Users List</div>
           <div class="section-sub">Filtered and sorted by recent activity</div>
         </div>
-        <div class="tabs" role="tablist">
-          <button class="tab" role="tab" data-tab="all" aria-selected="true">All</button>
-          <button class="tab" role="tab" data-tab="live">Live</button>
-          <button class="tab" role="tab" data-tab="active">Active</button>
-          <button class="tab" role="tab" data-tab="inactive">Inactive</button>
-          <button class="tab" role="tab" data-tab="new">New</button>
-          <button class="tab" role="tab" data-tab="24h">24h</button>
+        <div class="actions">
+          <button id="exportCsv2" class="btn" type="button">⬇️ CSV</button>
+          <button id="exportJson2" class="btn" type="button">⬇️ JSON</button>
         </div>
       </div>
       <div class="table-wrap">
@@ -225,12 +257,14 @@
       <div class="section-title">📊 Activeness Comparison</div>
       <div class="section-sub">Today vs Yesterday vs 7d vs 15d vs 30d vs 3m vs 6m vs 1y</div>
       <div class="chart" id="chartActiveness"></div>
+      <div class="legend" id="legendActiveness"></div>
     </section>
 
     <section class="section" id="newUsersSection">
       <div class="section-title">🆕 New Users Comparison</div>
       <div class="section-sub">New users by Today, Yesterday, 7d, 15d, 30d, 3m, 6m, 1y</div>
       <div class="chart" id="chartNewUsers"></div>
+      <div class="legend" id="legendNewUsers"></div>
     </section>
   </div>
 
@@ -241,6 +275,11 @@
     const headers = [
       'Timestamp','Unique User ID','First Visit DateTime','Last Visit DateTime','Last Exit DateTime','Last Visited Duration (minutes)','Total Visited Duration (minutes)','Total Visit Count','Device Type','Device Model / Name','Browser / WebView Info','Screen Resolution / Ratio','Timezone','IP Address','Country','City','Location (Latitude, Longitude)','Last Visited Page / Section Name','App Entry Time','App Exit Time','Live Status Icon','User Status (Text)','Days Since Last Visit','Account Age (Days)','Repeat Visit Type','Total Sessions','Active Period Range','Source (optional)','Notes / Admin Tag'
     ];
+
+    const fmtCompact = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 });
+
+    let ALL_ROWS = [];
+    let CURRENT_FILTERED = [];
 
     function parseDate(s) { const d = new Date(s); return isNaN(d) ? null : d; }
 
@@ -324,6 +363,7 @@
       const tsSel = document.getElementById('timestampSelect').value.trim();
       const dateFrom = document.getElementById('dateFrom').value;
       const dateTo = document.getElementById('dateTo').value;
+      const q = (document.getElementById('quickSearch').value || '').trim().toLowerCase();
 
       return rows.filter(r => {
         if (!withinRange(r, range)) return false;
@@ -337,6 +377,10 @@
           if (!last) return false;
           if (dateFrom){ const dF = new Date(dateFrom + 'T00:00:00'); if (last < dF) return false; }
           if (dateTo){ const dT = new Date(dateTo + 'T23:59:59'); if (last > dT) return false; }
+        }
+        if (q){
+          const hay = [r['Unique User ID'], r['IP Address'], r['City'], r['Country'], r['User Status (Text)'], r['Last Visit DateTime']].map(x => (x||'').toString().toLowerCase());
+          if (!hay.some(x => x.includes(q))) return false;
         }
         return true;
       });
@@ -366,14 +410,14 @@
         if (c.within24h) within24h++;
         visits += Number(r['Total Visit Count']||r['Total Sessions']||0);
       }
-      document.getElementById('kpiTotal').textContent = String(total);
-      document.getElementById('kpiLive').textContent = String(live);
-      document.getElementById('kpiActive').textContent = String(active);
-      document.getElementById('kpiInactive').textContent = String(inactive);
-      document.getElementById('kpiNew').textContent = String(isNew);
-      document.getElementById('kpi12h').textContent = String(within12h);
-      document.getElementById('kpi24h').textContent = String(within24h);
-      document.getElementById('kpiVisits').textContent = String(visits);
+      document.getElementById('kpiTotal').textContent = fmtCompact.format(total);
+      document.getElementById('kpiLive').textContent = fmtCompact.format(live);
+      document.getElementById('kpiActive').textContent = fmtCompact.format(active);
+      document.getElementById('kpiInactive').textContent = fmtCompact.format(inactive);
+      document.getElementById('kpiNew').textContent = fmtCompact.format(isNew);
+      document.getElementById('kpi12h').textContent = fmtCompact.format(within12h);
+      document.getElementById('kpi24h').textContent = fmtCompact.format(within24h);
+      document.getElementById('kpiVisits').textContent = fmtCompact.format(visits);
     }
 
     function renderTable(rows){
@@ -395,7 +439,7 @@
           <td>${escapeHtml(r['City']||'')}</td>
           <td>${escapeHtml(r['Country']||'')}</td>
           <td>${escapeHtml(r['Last Visit DateTime']||'')}</td>
-          <td>${Number(r['Total Visit Count']||r['Total Sessions']||0)}</td>
+          <td>${fmtCompact.format(Number(r['Total Visit Count']||r['Total Sessions']||0))}</td>
           <td title="${c.status}"><span class="chip">${c.icon}</span></td>
         `;
         frag.appendChild(tr);
@@ -423,7 +467,7 @@
           <div class="card-row"><div class="card-key">City</div><div class="card-val">${escapeHtml(r['City']||'')}</div></div>
           <div class="card-row"><div class="card-key">Country</div><div class="card-val">${escapeHtml(r['Country']||'')}</div></div>
           <div class="card-row"><div class="card-key">Last Visited</div><div class="card-val">${escapeHtml(r['Last Visit DateTime']||'')}</div></div>
-          <div class="card-row"><div class="card-key">Total Visits</div><div class="card-val">${Number(r['Total Visit Count']||r['Total Sessions']||0)}</div></div>
+          <div class="card-row"><div class="card-key">Total Visits</div><div class="card-val">${fmtCompact.format(Number(r['Total Visit Count']||r['Total Sessions']||0))}</div></div>
           <div class="card-row"><div class="card-key">Status</div><div class="card-val"><span class="chip">${c.icon}</span> ${c.status}</div></div>
         `;
         frag.appendChild(el);
@@ -433,63 +477,78 @@
 
     function renderActivenessComparison(rows){
       const el = document.getElementById('chartActiveness');
-      el.innerHTML = '';
+      const legend = document.getElementById('legendActiveness');
+      el.innerHTML = ''; legend.innerHTML = '';
       const now = new Date();
       const windows = [
-        { key: 'today', label: 'Today', match: (d) => sameDay(d, now) },
-        { key: 'yday', label: 'Yesterday', match: (d) => sameDay(d, addDays(now, -1)) },
-        { key: '7d', label: '7d', match: (d) => (now - d) <= 7*86400000 },
-        { key: '15d', label: '15d', match: (d) => (now - d) <= 15*86400000 },
-        { key: '30d', label: '30d', match: (d) => (now - d) <= 30*86400000 },
-        { key: '3m', label: '3m', match: (d) => (now - d) <= 90*86400000 },
-        { key: '6m', label: '6m', match: (d) => (now - d) <= 180*86400000 },
-        { key: '1y', label: '1y', match: (d) => (now - d) <= 365*86400000 },
+        { key: 'today', label: 'Today', color: getCss('--today'), match: (d) => sameDay(d, now) },
+        { key: 'yday', label: 'Yesterday', color: getCss('--yday'), match: (d) => sameDay(d, addDays(now, -1)) },
+        { key: '7d', label: '7d', color: getCss('--d7'), match: (d) => (now - d) <= 7*86400000 },
+        { key: '15d', label: '15d', color: getCss('--d15'), match: (d) => (now - d) <= 15*86400000 },
+        { key: '30d', label: '30d', color: getCss('--d30'), match: (d) => (now - d) <= 30*86400000 },
+        { key: '3m', label: '3m', color: getCss('--m3'), match: (d) => (now - d) <= 90*86400000 },
+        { key: '6m', label: '6m', color: getCss('--m6'), match: (d) => (now - d) <= 180*86400000 },
+        { key: '1y', label: '1y', color: getCss('--y1'), match: (d) => (now - d) <= 365*86400000 },
       ];
       const counts = windows.map(w => rows.reduce((acc, r) => { const d = parseDate(r['Last Visit DateTime']); return d && w.match(d) ? acc+1 : acc; }, 0));
       const max = Math.max(1, ...counts);
-      for (let i=0;i<windows.length;i++){
+      windows.forEach((w, i) => {
         const bar = document.createElement('div');
         bar.className = 'bar';
-        bar.style.height = Math.max(8, Math.round((counts[i]/max)*150)) + 'px';
-        bar.dataset.label = windows[i].label;
-        bar.title = `${counts[i]} active users`;
+        bar.style.height = Math.max(8, Math.round((counts[i]/max)*160)) + 'px';
+        bar.style.background = `linear-gradient(180deg, ${w.color}, ${hexToRgba(w.color, .35)})`;
+        bar.dataset.label = w.label;
+        bar.title = `${fmtCompact.format(counts[i])} active users`;
         el.appendChild(bar);
-      }
+        const li = document.createElement('div'); li.className = 'legend-item'; li.innerHTML = `<span class="swatch" style="background:${w.color}"></span><span>${w.label}</span>`; legend.appendChild(li);
+      });
     }
 
     function renderNewUsersComparison(rows){
       const el = document.getElementById('chartNewUsers');
-      el.innerHTML = '';
+      const legend = document.getElementById('legendNewUsers');
+      el.innerHTML = ''; legend.innerHTML = '';
       const now = new Date();
       const windows = [
-        { key: 'today', label: 'Today', match: (d) => sameDay(d, now) },
-        { key: 'yday', label: 'Yesterday', match: (d) => sameDay(d, addDays(now, -1)) },
-        { key: '7d', label: '7d', match: (d) => (now - d) <= 7*86400000 },
-        { key: '15d', label: '15d', match: (d) => (now - d) <= 15*86400000 },
-        { key: '30d', label: '30d', match: (d) => (now - d) <= 30*86400000 },
-        { key: '3m', label: '3m', match: (d) => (now - d) <= 90*86400000 },
-        { key: '6m', label: '6m', match: (d) => (now - d) <= 180*86400000 },
-        { key: '1y', label: '1y', match: (d) => (now - d) <= 365*86400000 },
+        { key: 'today', label: 'Today', color: getCss('--today'), match: (d) => sameDay(d, now) },
+        { key: 'yday', label: 'Yesterday', color: getCss('--yday'), match: (d) => sameDay(d, addDays(now, -1)) },
+        { key: '7d', label: '7d', color: getCss('--d7'), match: (d) => (now - d) <= 7*86400000 },
+        { key: '15d', label: '15d', color: getCss('--d15'), match: (d) => (now - d) <= 15*86400000 },
+        { key: '30d', label: '30d', color: getCss('--d30'), match: (d) => (now - d) <= 30*86400000 },
+        { key: '3m', label: '3m', color: getCss('--m3'), match: (d) => (now - d) <= 90*86400000 },
+        { key: '6m', label: '6m', color: getCss('--m6'), match: (d) => (now - d) <= 180*86400000 },
+        { key: '1y', label: '1y', color: getCss('--y1'), match: (d) => (now - d) <= 365*86400000 },
       ];
       const counts = windows.map(w => rows.reduce((acc, r) => { const d = parseDate(r['First Visit DateTime']); return d && w.match(d) ? acc+1 : acc; }, 0));
       const max = Math.max(1, ...counts);
-      for (let i=0;i<windows.length;i++){
+      windows.forEach((w, i) => {
         const bar = document.createElement('div');
         bar.className = 'bar';
-        bar.style.height = Math.max(8, Math.round((counts[i]/max)*150)) + 'px';
-        bar.dataset.label = windows[i].label;
-        bar.title = `${counts[i]} new users`;
+        bar.style.height = Math.max(8, Math.round((counts[i]/max)*160)) + 'px';
+        bar.style.background = `linear-gradient(180deg, ${w.color}, ${hexToRgba(w.color, .35)})`;
+        bar.dataset.label = w.label;
+        bar.title = `${fmtCompact.format(counts[i])} new users`;
         el.appendChild(bar);
-      }
+        const li = document.createElement('div'); li.className = 'legend-item'; li.innerHTML = `<span class="swatch" style="background:${w.color}"></span><span>${w.label}</span>`; legend.appendChild(li);
+      });
     }
 
     function addDays(d, n){ const x = new Date(d); x.setDate(x.getDate()+n); return x; }
     function sameDay(a,b){ return a && b && a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate(); }
+    function hexToRgba(hex, a){
+      try {
+        const m = hex.replace('#','');
+        const bigint = parseInt(m, 16);
+        const r = (bigint >> 16) & 255, g = (bigint >> 8) & 255, b = bigint & 255;
+        return `rgba(${r}, ${g}, ${b}, ${a})`;
+      } catch { return hex }
+    }
+    function getCss(varName){ return getComputedStyle(document.documentElement).getPropertyValue(varName).trim() || '#8b5cf6'; }
 
     function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
 
     function wireUi(rows){
-      const inputs = ['range','status','countrySelect','citySelect','ipSelect','timestampSelect','dateFrom','dateTo'].map(id => document.getElementById(id));
+      const inputs = ['range','status','countrySelect','citySelect','ipSelect','timestampSelect','dateFrom','dateTo','quickSearch'].map(id => document.getElementById(id));
       for (const el of inputs){ el.addEventListener('input', () => refresh(rows)); }
       document.querySelectorAll('.tab').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -514,6 +573,13 @@
           refresh(rows);
         });
       });
+      // Export buttons
+      const doCsv = () => exportCSV(CURRENT_FILTERED);
+      const doJson = () => exportJSON(CURRENT_FILTERED);
+      document.getElementById('exportCsv').addEventListener('click', doCsv);
+      document.getElementById('exportJson').addEventListener('click', doJson);
+      document.getElementById('exportCsv2').addEventListener('click', doCsv);
+      document.getElementById('exportJson2').addEventListener('click', doJson);
     }
 
     function populateFilters(rows){
@@ -523,31 +589,56 @@
       const ips = unique(rows.map(r => r['IP Address']||'').map(s=>s.trim()).filter(Boolean));
       const timestamps = unique(rows.map(r => r['Timestamp']||'').map(s=>s.trim()).filter(Boolean));
 
-      const fill = (id, list) => {
-        const sel = document.getElementById(id); sel.innerHTML = '<option value="">Any</option>' + list.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+      const fill = (id, list, anyLabel) => {
+        const sel = document.getElementById(id); sel.innerHTML = `<option value="">${anyLabel}</option>` + list.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
       };
-      fill('countrySelect', countries);
-      fill('citySelect', cities);
-      fill('ipSelect', ips);
-      fill('timestampSelect', timestamps);
+      fill('countrySelect', countries, 'Country (Any)');
+      fill('citySelect', cities, 'City (Any)');
+      fill('ipSelect', ips, 'IP (Any)');
+      fill('timestampSelect', timestamps, 'Timestamp (Any)');
     }
 
     function refresh(allRows){
-      const filtered = filterRows(allRows);
-      updateKpis(filtered);
-      renderTable(filtered);
-      renderCards(filtered);
-      renderActivenessComparison(filtered);
-      renderNewUsersComparison(filtered);
+      CURRENT_FILTERED = filterRows(allRows);
+      updateKpis(CURRENT_FILTERED);
+      renderTable(CURRENT_FILTERED);
+      renderCards(CURRENT_FILTERED);
+      renderActivenessComparison(CURRENT_FILTERED);
+      renderNewUsersComparison(CURRENT_FILTERED);
       document.getElementById('lastUpdated').textContent = 'Updated ' + new Date().toLocaleString();
+    }
+
+    function exportJSON(rows){
+      const blob = new Blob([JSON.stringify(rows, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `users_${Date.now()}.json`; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    }
+
+    function exportCSV(rows){
+      if (!rows.length) { alert('No rows to export'); return; }
+      const cols = headers;
+      const csv = [cols.join(',')].concat(rows.map(r => cols.map(h => csvEscape(r[h])).join(','))).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `users_${Date.now()}.csv`; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    }
+
+    function csvEscape(v){
+      const s = (v==null ? '' : String(v));
+      if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+      return s;
     }
 
     (async function init(){
       try {
-        const rows = await fetchRows();
-        populateFilters(rows);
-        wireUi(rows);
-        refresh(rows);
+        ALL_ROWS = await fetchRows();
+        populateFilters(ALL_ROWS);
+        wireUi(ALL_ROWS);
+        refresh(ALL_ROWS);
       } catch (e) {
         document.getElementById('lastUpdated').textContent = 'Failed to load data';
       }
