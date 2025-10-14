@@ -160,6 +160,13 @@ function parseRequestBody_(e) {
   return params || null;
 }
 
+/** JSON response helper */
+function json_(obj) {
+  return ContentService
+    .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
 function findOrCreateRowByUid_(sh, uid, payload) {
   const data = sh.getRange(2, COLS.UID, Math.max(0, sh.getLastRow()-1), 1).getValues();
   for (let i=0; i<data.length; i++) {
@@ -570,19 +577,19 @@ function DASHBOARD_HTML_(){
 
   function renderTable(rows){
     const tb = byId('tbl').querySelector('tbody');
-    tb.innerHTML = rows.slice(0, 500).map(r => `
+    tb.innerHTML = rows.slice(0, 500).map(r => \`
       <tr>
-        <td><span class="tag"><i>🆔</i>${r.uid}</span></td>
-        <td>${r.timestamp||''}</td>
-        <td>${r.ip||''}</td>
-        <td>${r.city||''}</td>
-        <td>${r.country||''}</td>
-        <td>${r.lastVisit||''}</td>
-        <td>${r.lastDuration||0}</td>
-        <td>${r.totalDuration||0}</td>
-        <td>${r.icon}</td>
+        <td><span class=\"tag\"><i>🆔</i>\${r.uid}</span></td>
+        <td>\${r.timestamp||''}</td>
+        <td>\${r.ip||''}</td>
+        <td>\${r.city||''}</td>
+        <td>\${r.country||''}</td>
+        <td>\${r.lastVisit||''}</td>
+        <td>\${r.lastDuration||0}</td>
+        <td>\${r.totalDuration||0}</td>
+        <td>\${r.icon}</td>
       </tr>
-    `).join('');
+    \`).join('');
   }
 
   function setNum(elId, val){
@@ -658,7 +665,7 @@ function DASHBOARD_HTML_(){
 
     const totalVisitsAll = rows.reduce((a,r)=>a + (r.totalVisits||0), 0);
     const totalMinutesAll = rows.reduce((a,r)=>a + (r.totalDuration||0), 0);
-    byId('totals_text').textContent = `All-time visits: ${totalVisitsAll} | Minutes: ${Math.round(totalMinutesAll)}`;
+    byId('totals_text').textContent = \`All-time visits: \${totalVisitsAll} | Minutes: \${Math.round(totalMinutesAll)}\`;
 
     // sparks
     spark('sp_total', [rows.length, Math.max(1, Math.round(rows.length*0.7)), Math.max(1, Math.round(rows.length*0.9)), rows.length]);
