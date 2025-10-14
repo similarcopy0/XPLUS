@@ -1,10 +1,10 @@
 /*
-  Google Apps Script backend for x.plus.bd
+  Google Apps Script backend for Users Dashboard
   - Sheet name must be exactly: "Users Dashboard"
   - Exposes doPost(e) for analytics events (page_enter, page_exit)
-  - Exposes doGet(e) with action=rows to read structured JSON
+  - Exposes doGet(e) with action=rows to read structured JSON or JSONP (callback=fn)
 
-  Security note: This is designed for a public Web App deployment (execute as Me, accessible to Anyone with link)
+  Deploy as Web App: Execute as Me; Who has access: Anyone with the link
 */
 
 const SHEET_NAME = 'Users Dashboard';
@@ -29,7 +29,6 @@ function ensureHeaderRow_(sheet) {
   if (!hasHeader) {
     rng.setValues([headers]);
   } else {
-    // Ensure width matches
     const existing = values[0];
     if (existing.length < headers.length) {
       sheet.insertColumnsAfter(existing.length, headers.length - existing.length);
@@ -42,7 +41,7 @@ function findRowByUid_(sheet, uid) {
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return null;
   const uidCol = 2; // B: Unique User ID
-  const range = sheet.getRange(2, uidCol, lastRow - 2 + 1, 1);
+  const range = sheet.getRange(2, uidCol, lastRow - 1, 1);
   const values = range.getValues();
   for (let i = 0; i < values.length; i++) {
     if ((values[i][0] || '').toString() === uid) return 2 + i; // row index
@@ -85,7 +84,6 @@ function upsertEnter_(payload) {
   ensureHeaderRow_(sheet);
   const uid = (payload.uid || '').toString();
   if (!uid) throw new Error('uid missing');
-  const nowStr = new Date();
 
   const rowIndex = findRowByUid_(sheet, uid);
   const base = {
@@ -107,15 +105,13 @@ function upsertEnter_(payload) {
   };
 
   if (rowIndex) {
-    // Update existing row
     const prev = sheet.getRange(rowIndex, 1, 1, getHeaders_().length).getValues()[0];
     const visitCount = Number(prev[7] || 0) + 1; // H: Total Visit Count
-    const totalSessions = Number(prev[26] || 0) + 1; // AA is index 27 but 0-based 26
+    const totalSessions = Number(prev[26] || 0) + 1; // AA column (0-based index 26)
     base['Total Visit Count'] = visitCount;
     base['Total Sessions'] = totalSessions;
     updateRowValues_(sheet, rowIndex, base);
   } else {
-    // Insert new row at end
     const lastRow = Math.max(2, sheet.getLastRow() + 1);
     const obj = Object.assign({}, base, {
       'First Visit DateTime': base['First Visit DateTime'] || base['Last Visit DateTime'],
@@ -135,7 +131,6 @@ function upsertExit_(payload) {
   const exitIso = payload.exitTime;
   const dur = Number(payload.durationMinutes || 0);
   if (!rowIndex) {
-    // If exit comes first unexpectedly, create minimal row
     const lastRow = Math.max(2, sheet.getLastRow() + 1);
     const obj = {
       'Timestamp': Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss'),
@@ -191,19 +186,21 @@ function doGet(e) {
       const sheet = getSheet_();
       ensureHeaderRow_(sheet);
       const values = sheet.getDataRange().getValues();
-      if (values.length <= 1) {
-        return ContentService.createTextOutput(JSON.stringify({ rows: [] })).setMimeType(ContentService.MimeType.JSON);
-      }
-      const headers = values[0];
-      const rows = values.slice(1).filter(r => r.some(x => x !== '' && x != null)).map(cols => {
+      const headers = values[0] || getHeaders_();
+      const rows = (values.length <= 1) ? [] : values.slice(1).filter(r => r.some(x => x !== '' && x != null)).map(cols => {
         const obj = {};
         headers.forEach((h, i) => obj[h] = cols[i]);
         return obj;
       });
-      return ContentService.createTextOutput(JSON.stringify({ rows })).setMimeType(ContentService.MimeType.JSON);
+      const payload = JSON.stringify({ rows });
+      const cb = e && e.parameter && e.parameter.callback;
+      if (cb) {
+        return ContentService.createTextOutput(`${cb}(${payload})`).setMimeType(ContentService.MimeType.JAVASCRIPT);
+      }
+      return ContentService.createTextOutput(payload).setMimeType(ContentService.MimeType.JSON);
     }
 
-    return HtmlService.createHtmlOutput('x.plus.bd Apps Script online');
+    return HtmlService.createHtmlOutput('Users Dashboard Apps Script online');
   } catch (err) {
     return ContentService.createTextOutput(JSON.stringify({ ok: false, error: String(err) })).setMimeType(ContentService.MimeType.JSON);
   }

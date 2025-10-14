@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>x.plus.bd — Users Dashboard</title>
+  <title>Users Dashboard</title>
   <style>
     :root {
       --bg: #0b0b0c;
@@ -38,7 +38,7 @@
 
     .wrap { max-width: 1200px; margin: 0 auto; padding: 1rem; display: grid; gap: 1rem; }
 
-    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .9rem 1rem; background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03)); border: 1px solid rgba(255,255,255,.08); border-radius: var(--radius); box-shadow: var(--shadow); backdrop-filter: blur(10px); position: sticky; top: 0; z-index: 10; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding: .9rem 1rem; background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03)); border: 1px solid rgba(255,255,255,.08); border-radius: var(--radius); box-shadow: var(--shadow); backdrop-filter: blur(10px); position: sticky; top: 0; z-index: 10; }
     .brand { display: flex; align-items: center; gap: .6rem; font-weight: 800; letter-spacing: .2px; }
     .badge { display: inline-grid; place-items: center; width: 1.9rem; height: 1.9rem; border-radius: .6rem; background: linear-gradient(135deg, var(--accent), #6d28d9); box-shadow: 0 8px 20px rgba(124,58,237,.35); animation: float 4s ease-in-out infinite; }
     @keyframes float { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-3px) } }
@@ -115,14 +115,19 @@
 <body>
   <div class="wrap">
     <header class="topbar">
-      <div class="brand"><div class="badge">📊</div> <div>x.plus.bd — Users Dashboard</div></div>
+      <div class="brand"><div class="badge">📊</div> <div>Users Dashboard</div></div>
       <div class="actions">
         <input id="quickSearch" class="control" placeholder="Quick search (User ID, IP, City, Country)" style="min-width: 14rem;" />
-        <label class="toggle" title="Auto-refresh every 30s">
+        <label class="toggle" id="autoRefreshLabel" title="Auto-refresh every 30s">
           <input id="autoRefreshToggle" type="checkbox" />
           <span class="track"><span class="thumb"></span></span>
           <span>Auto-refresh</span>
         </label>
+        <select id="refreshInterval" class="control" aria-label="Refresh interval" style="width:auto;">
+          <option value="15000">15s</option>
+          <option value="30000" selected>30s</option>
+          <option value="60000">60s</option>
+        </select>
         <button id="resetFilters" class="btn" type="button">↺ Reset Filters</button>
         <button id="exportCsv" class="btn" type="button">⬇️ Export CSV</button>
         <button id="exportJson" class="btn" type="button">⬇️ Export JSON</button>
@@ -274,6 +279,7 @@
     <section class="section" id="activenessSection">
       <div class="section-title">📊 Activeness Comparison</div>
       <div class="section-sub">Today vs Yesterday vs 7d vs 15d vs 30d vs 3m vs 6m vs 1y</div>
+      <div class="actions" style="justify-content:flex-end"><button id="dlActiveness" class="btn" type="button">🖼️ Download PNG</button></div>
       <div class="chart" id="chartActiveness"></div>
       <div class="legend" id="legendActiveness"></div>
     </section>
@@ -281,6 +287,7 @@
     <section class="section" id="newUsersSection">
       <div class="section-title">🆕 New Users Comparison</div>
       <div class="section-sub">New users by Today, Yesterday, 7d, 15d, 30d, 3m, 6m, 1y</div>
+      <div class="actions" style="justify-content:flex-end"><button id="dlNewUsers" class="btn" type="button">🖼️ Download PNG</button></div>
       <div class="chart" id="chartNewUsers"></div>
       <div class="legend" id="legendNewUsers"></div>
     </section>
@@ -325,23 +332,44 @@
     }
 
     async function fetchRows(){
+      // Try fetch JSON, then JSONP, then CSV
       try {
         const r = await fetch(APPS_SCRIPT_URL + '?action=rows');
         if (!r.ok) throw new Error('apps script rows failed');
         const j = await r.json();
         if (!Array.isArray(j.rows)) throw new Error('invalid rows json');
         return j.rows;
-      } catch (e) {
-        const r = await fetch(CSV_URL);
-        const txt = await r.text();
-        const lines = txt.split(/\r?\n/).filter(Boolean);
-        const head = lines.shift().split(',');
-        return lines.map(line => {
-          const cols = parseCsvLine(line);
-          const obj = {}; head.forEach((h, i) => obj[h.trim()] = (cols[i] ?? '').trim());
-          return obj;
-        });
+      } catch (e1) {
+        try {
+          const j = await fetchRowsJsonp();
+          if (!Array.isArray(j.rows)) throw new Error('invalid jsonp rows');
+          return j.rows;
+        } catch (e2) {
+          const r = await fetch(CSV_URL);
+          const txt = await r.text();
+          const lines = txt.split(/\r?\n/).filter(Boolean);
+          const head = lines.shift().split(',');
+          return lines.map(line => {
+            const cols = parseCsvLine(line);
+            const obj = {}; head.forEach((h, i) => obj[h.trim()] = (cols[i] ?? '').trim());
+            return obj;
+          });
+        }
       }
+    }
+
+    function fetchRowsJsonp(timeoutMs = 9000){
+      return new Promise((resolve, reject) => {
+        const cbName = 'dashRowsCb_' + Math.random().toString(36).slice(2);
+        const cleanup = (script) => { try { delete window[cbName]; } catch {} if (script && script.parentNode) script.parentNode.removeChild(script); };
+        window[cbName] = (data) => { cleanup(script); resolve(data || { rows: [] }); };
+        const script = document.createElement('script');
+        script.src = APPS_SCRIPT_URL + '?action=rows&callback=' + cbName;
+        script.async = true;
+        script.onerror = () => { cleanup(script); reject(new Error('jsonp error')); };
+        document.body.appendChild(script);
+        setTimeout(() => { cleanup(script); reject(new Error('jsonp timeout')); }, timeoutMs);
+      });
     }
 
     function parseCsvLine(line){
@@ -527,6 +555,7 @@
         bar.style.height = Math.max(8, Math.round((counts[i]/max)*160)) + 'px';
         bar.style.background = `linear-gradient(180deg, ${w.color}, ${hexToRgba(w.color, .35)})`;
         bar.dataset.label = w.label;
+        bar.setAttribute('data-color', w.color);
         bar.title = `${fmtCompact.format(counts[i])} active users`;
         el.appendChild(bar);
         const li = document.createElement('div'); li.className = 'legend-item'; li.innerHTML = `<span class="swatch" style="background:${w.color}"></span><span>${w.label}</span>`; legend.appendChild(li);
@@ -556,6 +585,7 @@
         bar.style.height = Math.max(8, Math.round((counts[i]/max)*160)) + 'px';
         bar.style.background = `linear-gradient(180deg, ${w.color}, ${hexToRgba(w.color, .35)})`;
         bar.dataset.label = w.label;
+        bar.setAttribute('data-color', w.color);
         bar.title = `${fmtCompact.format(counts[i])} new users`;
         el.appendChild(bar);
         const li = document.createElement('div'); li.className = 'legend-item'; li.innerHTML = `<span class="swatch" style="background:${w.color}"></span><span>${w.label}</span>`; legend.appendChild(li);
@@ -611,10 +641,17 @@
       document.getElementById('exportJson2').addEventListener('click', doJson);
       // Reset
       document.getElementById('resetFilters').addEventListener('click', resetFilters);
-      // Auto-refresh
-      document.getElementById('autoRefreshToggle').addEventListener('change', (e) => {
-        if (e.target.checked) startAutoRefresh(); else stopAutoRefresh();
-      });
+      // Auto-refresh toggle and interval
+      const toggle = document.getElementById('autoRefreshToggle');
+      const label = document.getElementById('autoRefreshLabel');
+      const intervalSel = document.getElementById('refreshInterval');
+      const updateTitle = () => { label.title = 'Auto-refresh every ' + Math.round((parseInt(intervalSel.value)||30000)/1000) + 's'; };
+      toggle.addEventListener('change', (e) => { if (e.target.checked) startAutoRefresh(); else stopAutoRefresh(); });
+      intervalSel.addEventListener('change', () => { updateTitle(); if (toggle.checked) startAutoRefresh(); });
+      updateTitle();
+      // Chart downloads
+      document.getElementById('dlActiveness').addEventListener('click', () => downloadChartImage(document.getElementById('chartActiveness'), 'activeness_' + Date.now() + '.png'));
+      document.getElementById('dlNewUsers').addEventListener('click', () => downloadChartImage(document.getElementById('chartNewUsers'), 'new_users_' + Date.now() + '.png'));
     }
 
     function populateFilters(rows){
@@ -650,6 +687,8 @@
 
     function startAutoRefresh(){
       stopAutoRefresh();
+      const interval = parseInt(document.getElementById('refreshInterval').value) || 30000;
+      document.getElementById('autoRefreshLabel').title = 'Auto-refresh every ' + Math.round(interval/1000) + 's';
       AUTO_TIMER = setInterval(async () => {
         try {
           const saved = {
@@ -662,16 +701,14 @@
           ALL_ROWS = rows;
           populateFilters(rows);
           // restore selections
-          const setSel = (id, val) => { const el = document.getElementById(id); if (val && el.querySelector(`option[value="${CSS.escape(val)}"]`)) el.value = val; };
-          if (window.CSS && CSS.escape){
-            setSel('countrySelect', saved.country);
-            setSel('citySelect', saved.city);
-            setSel('ipSelect', saved.ip);
-            setSel('timestampSelect', saved.ts);
-          }
+          const setSel = (id, val) => { const el = document.getElementById(id); if (val && window.CSS && CSS.escape && el.querySelector(`option[value="${CSS.escape(val)}"]`)) el.value = val; };
+          setSel('countrySelect', saved.country);
+          setSel('citySelect', saved.city);
+          setSel('ipSelect', saved.ip);
+          setSel('timestampSelect', saved.ts);
           refresh(rows);
         } catch (e) { /* ignore */ }
-      }, 30000);
+      }, interval);
     }
 
     function stopAutoRefresh(){ if (AUTO_TIMER) { clearInterval(AUTO_TIMER); AUTO_TIMER = null; } }
@@ -709,6 +746,48 @@
       const s = (v==null ? '' : String(v));
       if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
       return s;
+    }
+
+    function downloadChartImage(chartEl, filename){
+      if (!chartEl) return;
+      const rect = chartEl.getBoundingClientRect();
+      const scale = window.devicePixelRatio || 2;
+      const width = Math.max(320, Math.round(rect.width));
+      const height = Math.round(rect.height + 28);
+      const canvas = document.createElement('canvas');
+      canvas.width = width * scale; canvas.height = height * scale;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(scale, scale);
+      // background
+      ctx.fillStyle = '#0e0f13';
+      ctx.fillRect(0, 0, width, height);
+      const bars = Array.from(chartEl.querySelectorAll('.bar'));
+      for (const b of bars){
+        const br = b.getBoundingClientRect();
+        const x = Math.round(br.left - rect.left);
+        const y = Math.round(br.top - rect.top);
+        const w = Math.round(br.width);
+        const h = Math.round(br.height);
+        const color = b.getAttribute('data-color') || '#8b5cf6';
+        ctx.fillStyle = color; ctx.fillRect(x, y, w, h);
+      }
+      // labels at bottom
+      ctx.font = '12px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+      ctx.fillStyle = '#9aa3ad';
+      for (const b of bars){
+        const br = b.getBoundingClientRect();
+        const label = b.getAttribute('data-label') || '';
+        const textWidth = ctx.measureText(label).width;
+        const cx = Math.round((br.left - rect.left) + br.width/2 - textWidth/2);
+        const cy = height - 8;
+        ctx.fillText(label, cx, cy);
+      }
+      canvas.toBlob(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = filename; a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+      }, 'image/png');
     }
 
     (async function init(){
