@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <!-- IMPORTANT: Include this in your main index.html <head> (not here if you inline this inside <body>) -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Users Analytics Tracker</title>
+  <style>
+    :root {
+      --ua-bg: #0b1020;
+      --ua-fg: #e9eef9;
+      --ua-accent: #6c8cff;
+      --ua-green: #1ec97f;
+      --ua-red: #ff5a78;
+      --ua-yellow: #ffcc66;
+      --ua-blue: #37b5ff;
+      --ua-muted: #8ea0c6;
+      --ua-shadow: 0 10px 30px rgba(0,0,0,0.25);
+      --ua-radius: 14px;
+      --ua-font: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      font-size: 16px; /* base for rem */
+    }
+    @media (max-width: 600px) {
+      :root { font-size: 15px; }
+    }
+    @media (max-width: 400px) {
+      :root { font-size: 14px; }
+    }
+
+    /* Debug widget (hidden by default); toggle by setting data-ua-debug="1" on <html> */
+    .ua-debug {
+      position: fixed; right: 1rem; bottom: 1rem; z-index: 2147483647;
+      background: linear-gradient(180deg, #121936, #0b1020);
+      color: var(--ua-fg); box-shadow: var(--ua-shadow); border-radius: var(--ua-radius);
+      border: 1px solid rgba(255,255,255,0.08);
+      padding: 0.75rem 1rem; max-width: 22rem; width: max-content; pointer-events: auto;
+      display: none;
+    }
+    html[data-ua-debug="1"] .ua-debug { display: block; }
+    .ua-debug h4 { margin: 0 0 0.25rem 0; font-weight: 700; font-size: 0.95rem; }
+    .ua-debug .ua-kv { font-size: 0.8rem; color: var(--ua-muted); line-height: 1.35; }
+    .ua-badge { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.25rem 0.5rem; border-radius: 999px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.04); }
+    .ua-badge i { font-style: normal; }
+
+    /* Avoid fixed heights anywhere; let content flow */
+    .ua-fluid { min-height: auto; }
+  </style>
+</head>
+<body class="ua-fluid">
+  <!-- Paste this entire <script> block right after your main page's <body> tag in index.html -->
+  <script>
+  (function(){
+    'use strict';
+
+    // Configure your Apps Script Web App endpoint (exec URL)
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwzvrRCMrWrQkwXXo0tH0z7hUv3jUPtBnTWmm79KuN4w35RvhKkza8GUEQljqNbetav/exec';
+
+    // Local/session storage keys
+    const LS_UID = 'ua_uid';
+    const LS_FIRST_VISIT = 'ua_first_visit';
+    const LS_TOTAL_VISITS = 'ua_total_visit_count';
+    const LS_TOTAL_DURATION = 'ua_total_duration_minutes';
+    const SS_SESSION_START = 'ua_session_start';
+
+    // State
+    let ipCached = null;
+    let entering = true;
+
+    function nowIso() { return new Date().toISOString(); }
+    function toMinutes(ms) { return Math.round((ms / 60000) * 100) / 100; }
+
+    function ensureUid(){
+      let uid = localStorage.getItem(LS_UID);
+      if (!uid) {
+        // Generate predictable, URL-safe ID
+        uid = 'USR_' + crypto.getRandomValues(new Uint32Array(3)).join('').slice(0,12);
+        localStorage.setItem(LS_UID, uid);
+        // Set first visit timestamp once
+        localStorage.setItem(LS_FIRST_VISIT, nowIso());
+        // Init counters
+        localStorage.setItem(LS_TOTAL_VISITS, '0');
+        localStorage.setItem(LS_TOTAL_DURATION, '0');
+      }
+      return uid;
+    }
+
+    function bumpVisitCount(){
+      const curr = parseInt(localStorage.getItem(LS_TOTAL_VISITS) || '0', 10) + 1;
+      localStorage.setItem(LS_TOTAL_VISITS, String(curr));
+      return curr;
+    }
+
+    function addToTotalDuration(minutes){
+      const curr = parseFloat(localStorage.getItem(LS_TOTAL_DURATION) || '0');
+      const total = Math.round((curr + (Number.isFinite(minutes) ? minutes : 0)) * 100) / 100;
+      localStorage.setItem(LS_TOTAL_DURATION, String(total));
+      return total;
+    }
+
+    function getDeviceInfo(){
+      const ua = navigator.userAgent || '';
+      const uaData = navigator.userAgentData || null;
+
+      let deviceType = /Mobi|Android|iPhone|iPad|iPod|webOS|BlackBerry|Windows Phone/i.test(ua) ? 'Mobile' : 'Desktop';
+      if (/Tablet|iPad/i.test(ua)) deviceType = 'Tablet';
+
+      let model = '';
+      try {
+        if (uaData && uaData.brands) {
+          // High-level brand info
+          model = (uaData.brands.map(b => b.brand + ' ' + b.version).join(', ') || '').trim();
+        }
+        if (!model) {
+          // Attempt to parse Android model from UA
+          const match = ua.match(/Android [^;]*;\s*([^;\)]+)(?:;|\))/i);
+          if (match && match[1]) model = match[1].trim();
+        }
+      } catch { /* ignore */ }
+      if (!model) model = 'Unknown';
+
+      const screenRes = (window.screen?.width || 0) + 'x' + (window.screen?.height || 0);
+      const ratio = (window.devicePixelRatio || 1).toFixed(2);
+      const screenInfo = screenRes + ' @' + ratio + 'x';
+
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+      const offsetMin = -new Date().getTimezoneOffset();
+      const sign = offsetMin >= 0 ? '+' : '-';
+      const hh = String(Math.floor(Math.abs(offsetMin)/60)).padStart(2,'0');
+      const mm = String(Math.abs(offsetMin)%60).padStart(2,'0');
+      const tzString = `${tz} (GMT${sign}${hh}:${mm})`;
+
+      return {
+        deviceType,
+        modelName: model,
+        userAgent: ua,
+        screenInfo,
+        timezone: tzString
+      };
+    }
+
+    async function getIpInfo(timeoutMs = 2000){
+      if (ipCached) return ipCached;
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), timeoutMs);
+      try {
+        const resp = await fetch('https://ipapi.co/json/', { signal: ctrl.signal });
+        if (resp.ok) {
+          const j = await resp.json();
+          ipCached = {
+            ip: j.ip || '',
+            country: j.country_name || '',
+            city: j.city || '',
+            loc: j.latitude && j.longitude ? `${j.latitude}, ${j.longitude}` : (j.loc || ''),
+          };
+        } else {
+          ipCached = { ip: '', country: '', city: '', loc: '' };
+        }
+      } catch (e) {
+        ipCached = { ip: '', country: '', city: '', loc: '' };
+      } finally { clearTimeout(t); }
+      return ipCached;
+    }
+
+    function sectionName(){
+      const t = (document.title || '').trim();
+      const p = (location.pathname || '/').trim();
+      return t || p || 'Home';
+    }
+
+    function sendJSON(url, data, useBeacon){
+      const json = JSON.stringify(data);
+      if (useBeacon && 'sendBeacon' in navigator) {
+        try {
+          const blob = new Blob([json], { type: 'application/json' });
+          navigator.sendBeacon(url, blob);
+          return Promise.resolve({ ok: true, beacon: true });
+        } catch(_) { /* fallback to fetch */ }
+      }
+      return fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: json,
+        keepalive: !!useBeacon
+      }).then(r => ({ ok: r.ok }));
+    }
+
+    async function pageEnter(){
+      try {
+        const uid = ensureUid();
+        const firstVisit = localStorage.getItem(LS_FIRST_VISIT) || nowIso();
+        const visitCount = bumpVisitCount();
+        const entryTimeIso = nowIso();
+        sessionStorage.setItem(SS_SESSION_START, entryTimeIso);
+
+        const device = getDeviceInfo();
+        const ip = await getIpInfo(1800);
+
+        const payload = {
+          eventType: 'enter',
+          timestamp: entryTimeIso,
+          uid,
+          firstVisitDateTime: firstVisit,
+          lastVisitDateTime: entryTimeIso,
+          totalVisitCount: visitCount,
+          deviceType: device.deviceType,
+          deviceModel: device.modelName,
+          userAgent: device.userAgent,
+          screen: device.screenInfo,
+          timezone: device.timezone,
+          ip: ip.ip,
+          country: ip.country,
+          city: ip.city,
+          location: ip.loc,
+          lastVisitedPage: sectionName(),
+          appEntryTime: entryTimeIso,
+          source: document.referrer ? 'Referral' : 'Direct'
+        };
+
+        await sendJSON(APPS_SCRIPT_URL, payload, false);
+        entering = false;
+      } catch (e) {
+        // swallow
+      }
+    }
+
+    async function pageExit(reason){
+      try {
+        const uid = ensureUid();
+        const startIso = sessionStorage.getItem(SS_SESSION_START);
+        const exitIso = nowIso();
+        let lastMinutes = 0;
+        if (startIso) {
+          const durMs = Date.now() - Date.parse(startIso);
+          lastMinutes = toMinutes(durMs);
+        }
+        const totalMinutes = addToTotalDuration(lastMinutes);
+        const device = getDeviceInfo();
+        const ip = await getIpInfo(1200);
+
+        const payload = {
+          eventType: 'exit',
+          timestamp: exitIso,
+          uid,
+          lastExitDateTime: exitIso,
+          lastVisitedDurationMinutes: lastMinutes,
+          totalVisitedDurationMinutes: totalMinutes,
+          deviceType: device.deviceType,
+          deviceModel: device.modelName,
+          userAgent: device.userAgent,
+          screen: device.screenInfo,
+          timezone: device.timezone,
+          ip: ip.ip,
+          country: ip.country,
+          city: ip.city,
+          location: ip.loc,
+          lastVisitedPage: sectionName(),
+          appEntryTime: startIso || '',
+          appExitTime: exitIso,
+          exitReason: reason || 'unload'
+        };
+
+        await sendJSON(APPS_SCRIPT_URL, payload, true);
+      } catch (e) {
+        // swallow
+      }
+    }
+
+    // Init on ready
+    function onReady(fn){
+      if (document.readyState === 'complete' || document.readyState === 'interactive') fn();
+      else document.addEventListener('DOMContentLoaded', fn, { once: true });
+    }
+
+    onReady(() => {
+      // Safety: ensure viewport meta exists in your main <head>
+      // <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      pageEnter();
+    });
+
+    // Exit / background handlers
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') pageExit('hidden');
+    });
+    window.addEventListener('pagehide', () => pageExit('pagehide'));
+    window.addEventListener('beforeunload', () => pageExit('beforeunload'));
+
+    // Expose minimal API (optional)
+    window.UserAnalytics = {
+      get uid(){ return localStorage.getItem(LS_UID); },
+      setSection(name){ try { window.__ua_section_override = String(name||'').trim(); } catch(_){} },
+    };
+  })();
+  </script>
+
+  <!-- Optional debug widget -->
+  <div class="ua-debug">
+    <h4>Analytics Tracker</h4>
+    <div class="ua-kv">UID: <span id="ua-uid"></span></div>
+    <div class="ua-kv">Section: <span id="ua-sec"></span></div>
+    <div class="ua-kv">Visits: <span id="ua-vis"></span></div>
+  </div>
+  <script>
+    (function(){
+      if (document.documentElement.getAttribute('data-ua-debug') === '1') {
+        const $ = s => document.querySelector(s);
+        const upd = () => {
+          $('#ua-uid').textContent = localStorage.getItem('ua_uid') || '-';
+          $('#ua-sec').textContent = document.title || location.pathname || 'Home';
+          $('#ua-vis').textContent = localStorage.getItem('ua_total_visit_count') || '0';
+        };
+        upd(); setInterval(upd, 1500);
+      }
+    })();
+  </script>
+</body>
+</html>

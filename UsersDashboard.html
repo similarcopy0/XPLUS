@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Users Dashboard</title>
+  <style>
+    :root{
+      --bg: #070b18; --panel: #0d1328; --fg:#eaf0ff; --muted:#96a3c7; --primary:#6c8cff; --ok:#1ec97f; --warn:#ffcc66; --err:#ff5a78; --live:#37b5ff; --card:#0f1733; --border:rgba(255,255,255,0.08);
+      --radius:14px; --shadow:0 10px 30px rgba(0,0,0,0.25);
+      font-size:16px;
+    }
+    @media (max-width: 900px){ :root{ font-size:15px; } }
+    @media (max-width: 600px){ :root{ font-size:14px; } }
+    @media (max-width: 420px){ :root{ font-size:13.5px; } }
+
+    *{ box-sizing:border-box; }
+    body{ margin:0; background:linear-gradient(180deg,#070b18,#0a1021); color:var(--fg); font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial; }
+
+    header{ padding:1rem 1.25rem; position:sticky; top:0; background:rgba(7,11,24,0.8); backdrop-filter: blur(10px); border-bottom:1px solid var(--border); z-index:5; }
+    .title{ display:flex; align-items:center; justify-content:space-between; gap:1rem; }
+    .title h1{ margin:0; font-size:1.25rem; }
+    .subtitle{ margin:0.25rem 0 0 0; color:var(--muted); font-size:0.9rem; }
+
+    main{ padding:1rem; display:grid; grid-template-columns: 1fr; gap:1rem; max-width: 1400px; margin: 0 auto; }
+    .grid{ display:grid; grid-template-columns: repeat(12, 1fr); gap:1rem; }
+    .card{ background:linear-gradient(180deg,#0d1328,#0b1122); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); padding:1rem; min-height:auto; }
+    .kpis{ grid-column: 1/-1; display:grid; grid-template-columns: repeat(6,1fr); gap:1rem; }
+    @media (max-width: 1100px){ .kpis{ grid-template-columns: repeat(3,1fr); } }
+    @media (max-width: 600px){ .kpis{ grid-template-columns: repeat(2,1fr); } }
+
+    .kpi{ position:relative; overflow:hidden; }
+    .kpi h3{ margin:0; font-size:0.9rem; color:var(--muted); }
+    .kpi .val{ font-size:2rem; font-weight:800; letter-spacing:0.5px; margin-top:0.15rem; }
+    .kpi .spark{ position:absolute; right:0.75rem; bottom:0.5rem; width:100px; height:32px; opacity:0.8; }
+    .kpi .bubble{ position:absolute; inset:auto -20px -30px auto; width:140px; height:140px; border-radius:50%; filter: blur(22px); opacity:0.22; }
+    .kpi.total .bubble{ background: var(--primary); }
+    .kpi.active .bubble{ background: var(--ok); }
+    .kpi.inactive .bubble{ background: var(--err); }
+    .kpi.today .bubble{ background: var(--live); }
+    .kpi.live .bubble{ background: var(--live); }
+    .kpi.last24 .bubble{ background: var(--warn); }
+
+    .filters{ grid-column: 1/-1; display:flex; flex-wrap:wrap; gap:0.75rem; align-items:center; }
+    .filters .f{ display:flex; align-items:center; gap:0.5rem; padding:0.5rem 0.75rem; background:var(--card); border:1px solid var(--border); border-radius:999px; }
+    .filters select, .filters input{ background:transparent; color:var(--fg); border:none; outline:none; font-size:0.95rem; min-width: 8rem; }
+
+    .lists{ grid-column: 1/-1; display:grid; grid-template-columns: 2fr 1fr; gap:1rem; }
+    @media (max-width: 1000px){ .lists{ grid-template-columns: 1fr; } }
+
+    .table{ width:100%; border-collapse: collapse; font-size:0.9rem; }
+    .table th, .table td{ border-bottom:1px dashed var(--border); padding:0.6rem 0.5rem; text-align:left; vertical-align: top; }
+    .table th{ color:var(--muted); font-weight:600; }
+    .tag{ display:inline-flex; align-items:center; gap:0.4rem; padding:0.2rem 0.5rem; border-radius: 0.5rem; background:rgba(255,255,255,0.04); border: 1px solid var(--border); }
+    .tag i{ font-style: normal; }
+
+    .chart{ height: 220px; width:100%; }
+
+    .muted{ color: var(--muted); }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="title">
+      <div>
+        <h1>Users Dashboard</h1>
+        <p class="subtitle">Live, Active, Inactive, New — with filters and charts</p>
+      </div>
+      <div class="tag"><i>🗂️</i> Sheet: Users Dashboard</div>
+    </div>
+  </header>
+  <main>
+    <section class="grid">
+      <div class="kpis">
+        <div class="card kpi total"><h3>Total Users</h3><div class="val" id="k_total">0</div><canvas class="spark" id="sp_total"></canvas><div class="bubble"></div></div>
+        <div class="card kpi active"><h3>Active (≤30d)</h3><div class="val" id="k_active">0</div><canvas class="spark" id="sp_active"></canvas><div class="bubble"></div></div>
+        <div class="card kpi inactive"><h3>Inactive (>30d)</h3><div class="val" id="k_inactive">0</div><canvas class="spark" id="sp_inactive"></canvas><div class="bubble"></div></div>
+        <div class="card kpi today"><h3>Today's Active</h3><div class="val" id="k_today">0</div><canvas class="spark" id="sp_today"></canvas><div class="bubble"></div></div>
+        <div class="card kpi live"><h3>Current Live</h3><div class="val" id="k_live">0</div><canvas class="spark" id="sp_live"></canvas><div class="bubble"></div></div>
+        <div class="card kpi last24"><h3>Last 24h Active</h3><div class="val" id="k_24h">0</div><canvas class="spark" id="sp_24h"></canvas><div class="bubble"></div></div>
+      </div>
+
+      <div class="card filters">
+        <div class="f"><span class="muted">Status</span>
+          <select id="f_status">
+            <option value="all">All</option>
+            <option value="live">Live</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="new">New</option>
+          </select>
+        </div>
+        <div class="f"><span class="muted">Time Range</span>
+          <select id="f_range">
+            <option value="all">All time</option>
+            <option value="24h">Last 24h</option>
+            <option value="3d">Last 3 days</option>
+            <option value="7d">Last 7 days</option>
+            <option value="30d">Last 30 days</option>
+            <option value="90d">Last 3 months</option>
+            <option value="180d">Last 6 months</option>
+            <option value="365d">Last 12 months</option>
+          </select>
+        </div>
+        <div class="f"><span class="muted">Country</span>
+          <input id="f_country" placeholder="Any" />
+        </div>
+        <div class="f"><span class="muted">City</span>
+          <input id="f_city" placeholder="Any" />
+        </div>
+        <div class="f"><span class="muted">Min Minutes</span>
+          <input id="f_minmin" type="number" min="0" step="1" placeholder="0" />
+        </div>
+        <div class="f"><span class="muted">Search</span>
+          <input id="f_search" placeholder="UID / Page / IP" />
+        </div>
+      </div>
+
+      <div class="lists">
+        <div class="card">
+          <h3>Users List</h3>
+          <table class="table" id="tbl">
+            <thead>
+              <tr>
+                <th>User Id</th><th>Timestamp</th><th>IP</th><th>City</th><th>Country</th>
+                <th>Last Visit</th><th>Last Duration (m)</th><th>Total Duration (m)</th><th>Icon</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="card">
+          <h3>All-time Totals</h3>
+          <div class="muted" id="totals_text">Loading...</div>
+          <canvas class="chart" id="chart_totals"></canvas>
+        </div>
+      </div>
+    </section>
+  </main>
+  <script>
+    (function(){
+      const APPS_SCRIPT_JSON_URL = 'https://script.google.com/macros/s/AKfycbwzvrRCMrWrQkwXXo0tH0z7hUv3jUPtBnTWmm79KuN4w35RvhKkza8GUEQljqNbetav/exec?format=json';
+      const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSIOGb5RBMnQiQ-GiHtkOn5qQhGhQnUmCsVie-jSv6UhvMihSQv1JN03Tr1EtoTIfbLThkSgGzNdwqc/pub?output=csv';
+
+      const byId = (id) => document.getElementById(id);
+      const F = {
+        status: byId('f_status'), range: byId('f_range'), country: byId('f_country'), city: byId('f_city'), minmin: byId('f_minmin'), search: byId('f_search')
+      };
+
+      let ROWS = [];
+
+      function parseDate(s){ if (!s) return null; const d = new Date(s); return isNaN(d) ? null : d; }
+      function daysBetween(a,b){ if(!a||!b) return Infinity; return Math.floor(Math.abs(b - a)/86400000); }
+
+      function normalize(r){
+        const now = new Date();
+        const first = parseDate(r.FirstVisit || r['First Visit DateTime']);
+        const last = parseDate(r.LastVisit || r['Last Visit DateTime']);
+
+        const daysSince = last ? daysBetween(last, now) : Infinity;
+        const age = first ? daysBetween(first, now) : 0;
+
+        let status = 'inactive', icon = '🔴';
+        if (age <= 15) { status = 'new'; icon = '🆕'; }
+        else if (daysSince <= 0) { status = 'live'; icon = '🟢'; }
+        else if (daysSince <= 1) { status = 'active-24h'; icon = '🔵'; }
+        else if (daysSince <= 30) { status = 'active'; icon = '🟣'; }
+
+        return {
+          uid: r.UID || r['Unique User ID'] || '',
+          timestamp: r.Timestamp || '',
+          ip: r.IP || r['IP Address'] || '',
+          city: r.City || '',
+          country: r.Country || '',
+          lastVisit: r.LastVisit || r['Last Visit DateTime'] || '',
+          lastDuration: Number(r.LastDurationMin || r['Last Visited Duration (minutes)'] || 0) || 0,
+          totalDuration: Number(r.TotalDurationMin || r['Total Visited Duration (minutes)'] || 0) || 0,
+          totalVisits: Number(r.TotalVisitCount || r['Total Visit Count'] || 0) || 0,
+          icon, status,
+          page: r.LastPage || r['Last Visited Page / Section Name'] || ''
+        };
+      }
+
+      function applyFilters(rows){
+        const s = F.status.value;
+        const q = (F.search.value||'').toLowerCase();
+        const ctry = (F.country.value||'').toLowerCase();
+        const cty = (F.city.value||'').toLowerCase();
+        const minMin = Number(F.minmin.value||0) || 0;
+        const range = F.range.value;
+
+        const now = new Date();
+        const cutoff = (rng=>{
+          const map = { '24h':1, '3d':3, '7d':7, '30d':30, '90d':90, '180d':180, '365d':365 };
+          const d = map[rng];
+          if (!d) return null; const x = new Date(now.getTime() - d*86400000); return x;
+        })(range);
+
+        return rows.filter(r => {
+          if (s !== 'all') {
+            if (s === 'active' && !(r.status==='active'||r.status==='active-24h')) return false;
+            else if (s !== 'active' && r.status !== s) return false;
+          }
+          if (ctry && !(r.country||'').toLowerCase().includes(ctry)) return false;
+          if (cty && !(r.city||'').toLowerCase().includes(cty)) return false;
+          if (minMin && (r.totalDuration||0) < minMin) return false;
+          if (q) {
+            const hay = (r.uid+' '+r.page+' '+r.ip).toLowerCase();
+            if (!hay.includes(q)) return false;
+          }
+          if (cutoff) {
+            const lv = r.lastVisit ? new Date(r.lastVisit) : null;
+            if (!lv || lv < cutoff) return false;
+          }
+          return true;
+        });
+      }
+
+      function renderTable(rows){
+        const tb = byId('tbl').querySelector('tbody');
+        tb.innerHTML = rows.slice(0, 500).map(r => `
+          <tr>
+            <td><span class="tag"><i>🆔</i>${r.uid}</span></td>
+            <td>${r.timestamp||''}</td>
+            <td>${r.ip||''}</td>
+            <td>${r.city||''}</td>
+            <td>${r.country||''}</td>
+            <td>${r.lastVisit||''}</td>
+            <td>${r.lastDuration||0}</td>
+            <td>${r.totalDuration||0}</td>
+            <td>${r.icon}</td>
+          </tr>
+        `).join('');
+      }
+
+      function setNum(elId, val){
+        const el = byId(elId);
+        const start = Number(el.textContent)||0; const end = val;
+        const dur = 600; const t0 = performance.now();
+        function step(t){
+          const p = Math.min(1, (t-t0)/dur);
+          const v = Math.round(start + (end - start) * p);
+          el.textContent = String(v);
+          if (p < 1) requestAnimationFrame(step);
+        }
+        requestAnimationFrame(step);
+      }
+
+      function spark(elId, data){
+        const c = byId(elId); const ctx = c.getContext('2d');
+        const w = c.width = c.clientWidth; const h = c.height = c.clientHeight;
+        ctx.clearRect(0,0,w,h);
+        const n = data.length || 1;
+        const min = Math.min(...data, 0); const max = Math.max(...data, 1);
+        ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 2; ctx.beginPath();
+        data.forEach((v,i)=>{
+          const x = i/(n-1) * (w-8) + 4;
+          const y = h - ((v-min)/(max-min+1e-6)) * (h-8) - 4;
+          if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+        });
+        ctx.stroke();
+      }
+
+      function chartTotals(){
+        const c = byId('chart_totals'); const ctx = c.getContext('2d');
+        const w = c.width = c.clientWidth; const h = c.height = c.clientHeight;
+        ctx.clearRect(0,0,w,h);
+        const buckets = { '≤24h':0, '≤7d':0, '≤30d':0, '>30d':0 };
+        const now = new Date();
+        ROWS.forEach(r => {
+          if (!r.lastVisit) { buckets['>30d']++; return; }
+          const days = daysBetween(new Date(r.lastVisit), now);
+          if (days <= 1) buckets['≤24h']++; else if (days <= 7) buckets['≤7d']++; else if (days <= 30) buckets['≤30d']++; else buckets['>30d']++;
+        });
+        const keys = Object.keys(buckets); const vals = keys.map(k=>buckets[k]);
+        const maxv = Math.max(...vals, 1); const barW = Math.min(140, (w - 60) / keys.length - 20);
+        keys.forEach((k, i) => {
+          const v = vals[i]; const x = 40 + i*(barW+30); const y = h - 30; const bh = Math.max(6, (v/maxv) * (h-80));
+          ctx.fillStyle = 'rgba(108,140,255,0.25)'; ctx.fillRect(x, y-bh, barW, bh);
+          ctx.fillStyle = '#6c8cff'; ctx.fillRect(x, y-bh, barW, 6);
+          ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.font = '12px system-ui'; ctx.fillText(String(v), x + barW/2 - 4, y - bh - 8);
+          ctx.fillStyle = 'rgba(255,255,255,0.65)'; ctx.fillText(k, x + Math.max(0, barW/2 - 18), y + 16);
+        });
+      }
+
+      function recompute(){
+        const rows = ROWS.map(normalize);
+        const filtered = applyFilters(rows);
+
+        // KPIs
+        setNum('k_total', rows.length);
+        const now = new Date();
+        const active30 = rows.filter(r => r.status==='active' || r.status==='active-24h').length;
+        const inactive = rows.filter(r => r.status==='inactive').length;
+        const today = rows.filter(r => r.lastVisit && daysBetween(new Date(r.lastVisit), now) <= 1).length;
+        const live = rows.filter(r => r.status==='live').length;
+        const last24 = rows.filter(r => r.status==='active-24h' || r.status==='live').length;
+        setNum('k_active', active30);
+        setNum('k_inactive', inactive);
+        setNum('k_today', today);
+        setNum('k_live', live);
+        setNum('k_24h', last24);
+
+        renderTable(filtered);
+        chartTotals();
+
+        const totalVisitsAll = rows.reduce((a,r)=>a + (r.totalVisits||0), 0);
+        const totalMinutesAll = rows.reduce((a,r)=>a + (r.totalDuration||0), 0);
+        byId('totals_text').textContent = `All-time visits: ${totalVisitsAll} | Minutes: ${Math.round(totalMinutesAll)}`;
+
+        // sparks
+        spark('sp_total', [rows.length, Math.max(1, Math.round(rows.length*0.7)), Math.max(1, Math.round(rows.length*0.9)), rows.length]);
+        spark('sp_active', [active30, Math.max(0, active30-2), active30+1]);
+        spark('sp_inactive', [inactive, Math.max(0, inactive-1), inactive+2]);
+        spark('sp_today', [today, Math.max(0, today-1), today+1]);
+        spark('sp_live', [live, Math.max(0, live-1), live+1]);
+        spark('sp_24h', [last24, Math.max(0, last24-2), last24+1]);
+      }
+
+      function bindFilters(){ Object.values(F).forEach(el => el && el.addEventListener('input', recompute)); }
+
+      function fetchCSV(text){
+        // Small CSV parser for published Google Sheet
+        const lines = text.split(/\r?\n/).filter(Boolean);
+        if (lines.length < 2) return [];
+        const headers = lines[0].split(',').map(h=>h.trim());
+        return lines.slice(1).map(line => {
+          const cols = line.split(',');
+          const obj = {};
+          headers.forEach((h,i)=>{ obj[h] = (cols[i]||'').trim(); });
+          return obj;
+        });
+      }
+
+      function fetchData(){
+        // Try Apps Script JSON first
+        fetch(APPS_SCRIPT_JSON_URL)
+          .then(r=>r.json())
+          .then(j=>{ ROWS = j.rows || []; recompute(); })
+          .catch(()=>{
+            // Fallback to published CSV
+            fetch(CSV_URL)
+              .then(r=>r.text())
+              .then(txt => { ROWS = fetchCSV(txt); recompute(); })
+              .catch(()=>{ document.querySelector('#totals_text').textContent = 'Failed to load data'; });
+          });
+      }
+
+      window.addEventListener('resize', () => { recompute(); });
+
+      bindFilters();
+      fetchData();
+    })();
+  </script>
+</body>
+</html>
