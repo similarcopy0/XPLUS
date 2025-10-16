@@ -225,6 +225,13 @@ main {
 
 @media (max-width: 768px) {
   .filters {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .filters {
     grid-template-columns: 1fr;
   }
 }
@@ -246,7 +253,7 @@ main {
 
 .filter-group select,
 .filter-group input {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(0, 0, 0, 0.3);
   border: 1px solid var(--border);
   border-radius: 0.5rem;
   color: var(--fg);
@@ -254,13 +261,32 @@ main {
   font-size: 0.9rem;
   transition: var(--transition);
   outline: none;
+  backdrop-filter: blur(10px);
+}
+
+.filter-group select {
+  background: rgba(0, 0, 0, 0.4);
+  color: #ffffff;
+  font-weight: 500;
+}
+
+.filter-group select option {
+  background: rgba(15, 23, 51, 0.95);
+  color: #eaf0ff;
+  padding: 0.5rem;
+  border: none;
 }
 
 .filter-group select:focus,
 .filter-group input:focus {
   border-color: var(--primary);
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.5);
   box-shadow: 0 0 0 3px rgba(108, 140, 255, 0.1);
+}
+
+.filter-group select:hover {
+  background: rgba(0, 0, 0, 0.5);
+  border-color: rgba(108, 140, 255, 0.3);
 }
 
 /* Analytics Charts Section */
@@ -648,10 +674,10 @@ input:focus {
       <label for="f_status">⚙️ Status</label>
       <select id="f_status">
         <option value="all">All Status</option>
-        <option value="active">Active</option>
-        <option value="inactive">Inactive</option>
-        <option value="new">New</option>
-        <option value="live">Live</option>
+        <option value="active">Active (≤30d)</option>
+        <option value="inactive">Inactive (>30d)</option>
+        <option value="new">New (≤15d)</option>
+        <option value="live">Live (≤30min)</option>
       </select>
     </div>
     
@@ -689,6 +715,13 @@ input:focus {
     <div class="filter-group">
       <label for="f_search">🔍 Search</label>
       <input type="text" id="f_search" placeholder="UID, IP, City...">
+    </div>
+    
+    <div class="filter-group" style="grid-column: 1 / -1; display: flex; justify-content: center; margin-top: 1rem;">
+      <button id="applyFiltersBtn" class="refresh-btn" style="padding: 0.75rem 2rem; font-size: 0.9rem;">
+        <span>🔍</span>
+        <span>Apply Filters</span>
+      </button>
     </div>
   </section>
 
@@ -866,10 +899,15 @@ input:focus {
       
       const daysSinceLastVisit = (now - lastVisit) / (1000 * 60 * 60 * 24);
       const accountAge = (now - firstVisit) / (1000 * 60 * 60 * 24);
+      const minutesSinceLastVisit = (now - lastVisit) / (1000 * 60);
       
-      if (daysSinceLastVisit < 0.1) return 'live';
-      if (accountAge <= 15) return 'new';
-      if (daysSinceLastVisit <= 30) return 'active';
+      // Current Live - within last 30 minutes
+      if (minutesSinceLastVisit <= 30 && minutesSinceLastVisit >= 0) return 'live';
+      // New Users - First Visit within last 15 days
+      if (accountAge <= 15 && accountAge >= 0) return 'new';
+      // Active - Last Visit within last 30 days
+      if (daysSinceLastVisit <= 30 && daysSinceLastVisit >= 0) return 'active';
+      // Inactive - Last Visit over 30 days ago
       return 'inactive';
     }
 
@@ -885,26 +923,53 @@ input:focus {
       
       const kpis = {
         total: this.rawData.length,
-        active: this.rawData.filter(u => this.getUserStatus(u) === 'active').length,
-        inactive: this.rawData.filter(u => this.getUserStatus(u) === 'inactive').length,
+        // Active (≤30d) - Last Visit DateTime within last 30 days
+        active: this.rawData.filter(u => {
+          const lastVisit = new Date(u['Last Visit DateTime']);
+          const daysDiff = (now - lastVisit) / (1000 * 60 * 60 * 24);
+          return daysDiff <= 30 && daysDiff >= 0;
+        }).length,
+        // Inactive (>30d) - Last Visit DateTime over 30 days ago
+        inactive: this.rawData.filter(u => {
+          const lastVisit = new Date(u['Last Visit DateTime']);
+          const daysDiff = (now - lastVisit) / (1000 * 60 * 60 * 24);
+          return daysDiff > 30;
+        }).length,
+        // Today's Active - Last Visit DateTime today
         today: this.rawData.filter(u => {
           const lastVisit = new Date(u['Last Visit DateTime']);
           return lastVisit >= todayStart;
         }).length,
-        live: this.rawData.filter(u => this.getUserStatus(u) === 'live').length,
+        // Current Live - Last Visit DateTime within last 30 minutes
+        live: this.rawData.filter(u => {
+          const lastVisit = new Date(u['Last Visit DateTime']);
+          const minutesDiff = (now - lastVisit) / (1000 * 60);
+          return minutesDiff <= 30 && minutesDiff >= 0;
+        }).length,
+        // Last 72h Active - Last Visit DateTime within last 72 hours
         last72h: this.rawData.filter(u => {
           const lastVisit = new Date(u['Last Visit DateTime']);
-          return (now - lastVisit) / (1000 * 60 * 60) <= 72;
+          const hoursDiff = (now - lastVisit) / (1000 * 60 * 60);
+          return hoursDiff <= 72 && hoursDiff >= 0;
         }).length,
+        // Last 24h Active - Last Visit DateTime within last 24 hours
         last24h: this.rawData.filter(u => {
           const lastVisit = new Date(u['Last Visit DateTime']);
-          return (now - lastVisit) / (1000 * 60 * 60) <= 24;
+          const hoursDiff = (now - lastVisit) / (1000 * 60 * 60);
+          return hoursDiff <= 24 && hoursDiff >= 0;
         }).length,
+        // Last 12h Active - Last Visit DateTime within last 12 hours
         last12h: this.rawData.filter(u => {
           const lastVisit = new Date(u['Last Visit DateTime']);
-          return (now - lastVisit) / (1000 * 60 * 60) <= 12;
+          const hoursDiff = (now - lastVisit) / (1000 * 60 * 60);
+          return hoursDiff <= 12 && hoursDiff >= 0;
         }).length,
-        new: this.rawData.filter(u => this.getUserStatus(u) === 'new').length,
+        // New Users (≤15d) - First Visit DateTime within last 15 days
+        new: this.rawData.filter(u => {
+          const firstVisit = new Date(u['First Visit DateTime']);
+          const daysDiff = (now - firstVisit) / (1000 * 60 * 60 * 24);
+          return daysDiff <= 15 && daysDiff >= 0;
+        }).length,
         visits: this.rawData.reduce((sum, u) => sum + (parseInt(u['Total Visit Count']) || 0), 0)
       };
 
@@ -1171,6 +1236,12 @@ input:focus {
     element.addEventListener('input', debounce(() => {
       dashboard.applyFilters();
     }, CONFIG.DEBOUNCE_DELAY));
+  });
+  
+  // Apply Filters button
+  const applyFiltersBtn = document.getElementById('applyFiltersBtn');
+  applyFiltersBtn.addEventListener('click', () => {
+    dashboard.applyFilters();
   });
   
   // Chart toggle listeners

@@ -248,30 +248,56 @@ class AnalyticsCalculator {
   static calculateKPIs(data) {
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const yesterdayStart = new Date(todayStart.getTime() - 24 * 60 * 60 * 1000);
     
     return {
       total: data.length,
-      active: data.filter(u => this.getUserStatus(u) === 'active').length,
-      inactive: data.filter(u => this.getUserStatus(u) === 'inactive').length,
+      // Active (≤30d) - Last Visit DateTime within last 30 days
+      active: data.filter(u => {
+        const lastVisit = new Date(u['Last Visit DateTime']);
+        const daysDiff = (now - lastVisit) / (1000 * 60 * 60 * 24);
+        return daysDiff <= 30 && daysDiff >= 0;
+      }).length,
+      // Inactive (>30d) - Last Visit DateTime over 30 days ago
+      inactive: data.filter(u => {
+        const lastVisit = new Date(u['Last Visit DateTime']);
+        const daysDiff = (now - lastVisit) / (1000 * 60 * 60 * 24);
+        return daysDiff > 30;
+      }).length,
+      // Today's Active - Last Visit DateTime today
       today: data.filter(u => {
         const lastVisit = new Date(u['Last Visit DateTime']);
         return lastVisit >= todayStart;
       }).length,
-      live: data.filter(u => this.getUserStatus(u) === 'live').length,
+      // Current Live - Last Visit DateTime within last 30 minutes
+      live: data.filter(u => {
+        const lastVisit = new Date(u['Last Visit DateTime']);
+        const minutesDiff = (now - lastVisit) / (1000 * 60);
+        return minutesDiff <= 30 && minutesDiff >= 0;
+      }).length,
+      // Last 72h Active - Last Visit DateTime within last 72 hours
       last72h: data.filter(u => {
         const lastVisit = new Date(u['Last Visit DateTime']);
-        return (now - lastVisit) / (1000 * 60 * 60) <= 72;
+        const hoursDiff = (now - lastVisit) / (1000 * 60 * 60);
+        return hoursDiff <= 72 && hoursDiff >= 0;
       }).length,
+      // Last 24h Active - Last Visit DateTime within last 24 hours
       last24h: data.filter(u => {
         const lastVisit = new Date(u['Last Visit DateTime']);
-        return (now - lastVisit) / (1000 * 60 * 60) <= 24;
+        const hoursDiff = (now - lastVisit) / (1000 * 60 * 60);
+        return hoursDiff <= 24 && hoursDiff >= 0;
       }).length,
+      // Last 12h Active - Last Visit DateTime within last 12 hours
       last12h: data.filter(u => {
         const lastVisit = new Date(u['Last Visit DateTime']);
-        return (now - lastVisit) / (1000 * 60 * 60) <= 12;
+        const hoursDiff = (now - lastVisit) / (1000 * 60 * 60);
+        return hoursDiff <= 12 && hoursDiff >= 0;
       }).length,
-      new: data.filter(u => this.getUserStatus(u) === 'new').length,
+      // New Users (≤15d) - First Visit DateTime within last 15 days
+      new: data.filter(u => {
+        const firstVisit = new Date(u['First Visit DateTime']);
+        const daysDiff = (now - firstVisit) / (1000 * 60 * 60 * 24);
+        return daysDiff <= 15 && daysDiff >= 0;
+      }).length,
       visits: data.reduce((sum, u) => sum + (parseInt(u['Total Visit Count']) || 0), 0)
     };
   }
@@ -283,10 +309,15 @@ class AnalyticsCalculator {
     
     const daysSinceLastVisit = (now - lastVisit) / (1000 * 60 * 60 * 24);
     const accountAge = (now - firstVisit) / (1000 * 60 * 60 * 24);
+    const minutesSinceLastVisit = (now - lastVisit) / (1000 * 60);
     
-    if (daysSinceLastVisit < 0.1) return 'live';
-    if (accountAge <= 15) return 'new';
-    if (daysSinceLastVisit <= 30) return 'active';
+    // Current Live - within last 30 minutes
+    if (minutesSinceLastVisit <= 30 && minutesSinceLastVisit >= 0) return 'live';
+    // New Users - First Visit within last 15 days
+    if (accountAge <= 15 && accountAge >= 0) return 'new';
+    // Active - Last Visit within last 30 days
+    if (daysSinceLastVisit <= 30 && daysSinceLastVisit >= 0) return 'active';
+    // Inactive - Last Visit over 30 days ago
     return 'inactive';
   }
   
@@ -294,14 +325,14 @@ class AnalyticsCalculator {
     const countries = [...new Set(data.map(u => u.Country).filter(Boolean))].sort();
     const cities = [...new Set(data.map(u => u.City).filter(Boolean))].sort();
     const ips = [...new Set(data.map(u => u['IP Address']).filter(Boolean))].sort();
-    const statuses = [...new Set(data.map(u => this.getUserStatus(u)))].sort();
+    const statuses = ['Active (≤30d)', 'Inactive (>30d)', 'New (≤15d)', 'Live (≤30min)'];
     
     return {
       countries,
       cities,
       ips,
       statuses,
-      timeRanges: ['All', 'Today', 'Last 7 Days', 'Last 15 Days', 'Last 30 Days', 'Last 3 Months', 'Last 6 Months', 'Last 1 Year']
+      timeRanges: ['All Time', 'Today', 'Last 7 Days', 'Last 15 Days', 'Last 30 Days', 'Last 3 Months', 'Last 6 Months', 'Last 1 Year']
     };
   }
   
@@ -312,7 +343,7 @@ class AnalyticsCalculator {
     
     return data.filter(user => {
       const lastVisit = new Date(user['Last Visit DateTime']);
-      return lastVisit >= cutoffDate;
+      return lastVisit >= cutoffDate && lastVisit <= now;
     }).length;
   }
   
@@ -323,7 +354,7 @@ class AnalyticsCalculator {
     
     return data.filter(user => {
       const firstVisit = new Date(user['First Visit DateTime']);
-      return firstVisit >= cutoffDate;
+      return firstVisit >= cutoffDate && firstVisit <= now;
     }).length;
   }
   
