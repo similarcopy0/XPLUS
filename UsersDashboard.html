@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Users Dashboard</title>
+<style>
+:root {
+  --base-font-size: 16px;
+  font-size: var(--base-font-size);
+  --bg:#070b18; --panel:#0d1328; --fg:#eaf0ff; --muted:#96a3c7;
+  --primary:#6c8cff; --ok:#1ec97f; --warn:#ffcc66; --err:#ff5a78; --live:#37b5ff;
+  --card:#0f1733; --border:rgba(255,255,255,0.08);
+  --radius:0.875rem; --shadow:0 0.625rem 1.875rem rgba(0,0,0,0.25);
+  --transition: all 0.2s ease;
+}
+@media (max-width:1100px){:root{font-size:15px;}}
+@media (max-width:600px){:root{font-size:14px;}}
+@media (max-width:420px){:root{font-size:13.5px;}}
+
+*{box-sizing:border-box;}
+body{
+  margin:0; background:linear-gradient(180deg,#070b18,#0a1021);
+  color:var(--fg); font-family: system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,Arial;
+  line-height:1.4;
+}
+header{
+  padding:1rem 1.25rem; position:sticky; top:0; background:rgba(7,11,24,0.8);
+  backdrop-filter:blur(10px); border-bottom:1px solid var(--border); z-index:5;
+}
+.title{display:flex;align-items:center;justify-content:space-between;gap:1rem;}
+.title h1{margin:0;font-size:1.25rem;}
+.subtitle{margin:0.25rem 0 0 0;color:var(--muted);font-size:0.9rem;}
+main{padding:1rem;display:grid;grid-template-columns:1fr;gap:1rem;max-width:87.5rem;margin:0 auto;}
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:1rem;}
+.card{background:linear-gradient(180deg,#0d1328,#0b1122);border:1px solid var(--border);
+border-radius:var(--radius);box-shadow:var(--shadow);padding:1rem;min-height:auto;}
+
+.kpis{grid-column:1/-1;display:grid;grid-template-columns:repeat(9,1fr);gap:1rem;}
+@media (max-width:1500px){.kpis{grid-template-columns:repeat(8,1fr);}}
+@media (max-width:1200px){.kpis{grid-template-columns:repeat(6,1fr);}}
+@media (max-width:900px){.kpis{grid-template-columns:repeat(4,1fr);}}
+@media (max-width:600px){.kpis{grid-template-columns:repeat(3,1fr);}}
+@media (max-width:480px){.kpis{grid-template-columns:repeat(2,1fr);}}
+@media (max-width:380px){.kpis{grid-template-columns:repeat(1,1fr);}}
+
+.kpi{position:relative;overflow:hidden;transition:var(--transition);}
+.kpi:hover{transform:translateY(-2px);box-shadow:0 0.75rem 2rem rgba(0,0,0,0.35);}
+.kpi h3{margin:0;font-size:0.9rem;color:var(--muted);}
+.kpi .val{font-size:2rem;font-weight:800;letter-spacing:0.5px;margin-top:0.15rem;}
+.kpi .spark{position:absolute;right:0.75rem;bottom:0.5rem;width:100px;height:32px;opacity:0.9;}
+.kpi .bubble{position:absolute;inset:auto -20px -30px auto;width:140px;height:140px;border-radius:50%;filter:blur(22px);opacity:0.22;box-shadow:0 8px 30px rgba(0,0,0,0.4);}
+.kpi.total .bubble{background:var(--primary);}
+.kpi.active .bubble{background:var(--ok);}
+.kpi.inactive .bubble{background:var(--err);}
+.kpi.today .bubble{background:var(--ok);}
+.kpi.live .bubble{background:var(--live);}
+.kpi.last24 .bubble{background:var(--warn);}
+.kpi.last12 .bubble{background:var(--primary);}
+.kpi.lifetime .bubble{background:var(--err);}
+.kpi.newusers .bubble{background:var(--ok);}
+
+.filters{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:0.75rem;align-items:center;}
+.filters .f{display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;background:var(--card);border:1px solid var(--border);border-radius:999px;transition:var(--transition);}
+.filters .f:hover{border-color:var(--primary);}
+.filters select,.filters input{background:transparent;color:var(--fg);border:none;outline:none;font-size:0.95rem;min-width:8rem;transition:var(--transition);}
+.filters select:focus,.filters input:focus{color:var(--primary);}
+
+.lists{grid-column:1/-1;display:grid;grid-template-columns:2fr 1fr;gap:1rem;}
+@media (max-width:1000px){.lists{grid-template-columns:1fr;}}
+.table{width:100%;border-collapse:collapse;font-size:0.9rem;}
+.table th,.table td{border-bottom:1px dashed var(--border);padding:0.6rem 0.5rem;text-align:left;vertical-align:top;}
+.table th{color:var(--muted);font-weight:600;}
+.table tbody tr{transition:var(--transition);}
+.table tbody tr:hover{background:rgba(255,255,255,0.02);}
+.tag{display:inline-flex;align-items:center;gap:0.4rem;padding:0.2rem 0.5rem;border-radius:0.5rem;background:rgba(255,255,255,0.04);border:1px solid var(--border);transition:var(--transition);}
+.tag:hover{background:rgba(255,255,255,0.08);}
+.tag i{font-style:normal;}
+.chart{height:13.75rem;width:100%;}
+.muted{color:var(--muted);}
+.small-muted{font-size:0.85rem;color:var(--muted);}
+
+.loading{opacity:0.6;pointer-events:none;}
+.error{color:var(--err);background:rgba(255,90,120,0.1);padding:0.5rem;border-radius:var(--radius);border:1px solid var(--err);}
+.success{color:var(--ok);background:rgba(30,201,127,0.1);padding:0.5rem;border-radius:var(--radius);border:1px solid var(--ok);}
+
+.refresh-btn{background:var(--primary);color:white;border:none;padding:0.5rem 1rem;border-radius:999px;cursor:pointer;transition:var(--transition);}
+.refresh-btn:hover{background:var(--ok);transform:translateY(-1px);}
+.refresh-btn:active{transform:translateY(0);}
+
+.status-indicator{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:0.5rem;}
+.status-indicator.live{background:var(--live);animation:pulse 2s infinite;}
+.status-indicator.active{background:var(--ok);}
+.status-indicator.inactive{background:var(--err);}
+.status-indicator.new{background:var(--warn);}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.5;}}
+</style>
+</head>
+<body>
+<header>
+<div class="title">
+  <div>
+    <h1>Users Dashboard</h1>
+    <p class="subtitle">Live, Active, Inactive, New -- with filters and charts</p>
+  </div>
+  <div style="display:flex;gap:1rem;align-items:center;">
+    <div class="tag" title="Google Sheet Source"><i>🗂️</i> Sheet: Users Dashboard</div>
+    <button id="refreshBtn" class="refresh-btn" title="Refresh Data">🔄 Refresh</button>
+  </div>
+</div>
+</header>
+<main>
+<section class="grid">
+  <div class="kpis">
+    <div class="card kpi total" title="Total users"><h3>Total Users</h3><div class="val" id="k_total">0</div><canvas class="spark" id="sp_total"></canvas><div class="bubble"></div></div>
+    <div class="card kpi active" title="Active ≤30 days"><h3>Active (≤30d)</h3><div class="val" id="k_active">0</div><canvas class="spark" id="sp_active"></canvas><div class="bubble"></div></div>
+    <div class="card kpi inactive" title="Inactive >30 days"><h3>Inactive (>30d)</h3><div class="val" id="k_inactive">0</div><canvas class="spark" id="sp_inactive"></canvas><div class="bubble"></div></div>
+
+    <div class="card kpi today" title="Today's Active"><h3>Today's Active</h3><div class="val" id="k_today">0</div><canvas class="spark" id="sp_today"></canvas><div class="bubble"></div></div>
+    <div class="card kpi live" title="Currently Live"><h3>Current Live</h3><div class="val" id="k_live">0</div><canvas class="spark" id="sp_live"></canvas><div class="bubble"></div></div>
+    <div class="card kpi last24" title="Last 24h Active"><h3>Last 24h Active</h3><div class="val" id="k_24h">0</div><canvas class="spark" id="sp_24h"></canvas><div class="bubble"></div></div>
+
+    <div class="card kpi last12" title="Last 12h Active"><h3>Last 12h Active</h3><div class="val" id="k_12h">0</div><canvas class="spark" id="sp_12h"></canvas><div class="bubble"></div></div>
+    <div class="card kpi newusers" title="New Users ≤15d"><h3>New Users (≤15d)</h3><div class="val" id="k_new">0</div><canvas class="spark" id="sp_new"></canvas><div class="bubble"></div></div>
+    <div class="card kpi lifetime" title="Lifetime Total Visits"><h3>Lifetime Total Visits</h3><div class="val" id="k_visits">0</div><canvas class="spark" id="sp_visits"></canvas><div class="bubble"></div></div>
+  </div>
+
+  <div class="card filters">
+    <div class="f" title="Filter by Status"><span class="muted">Status</span>
+      <select id="f_status" aria-label="Status Filter">
+        <option value="all">All</option>
+        <option value="live">Live</option>
+        <option value="active">Active (≤30d)</option>
+        <option value="inactive">Inactive (>30d)</option>
+        <option value="new">New (≤15d)</option>
+      </select>
+    </div>
+    <div class="f" title="Filter by Time Range"><span class="muted">Time Range</span>
+      <select id="f_range" aria-label="Time Range Filter">
+        <option value="all">All time</option>
+        <option value="24h">Last 24h</option>
+        <option value="3d">Last 3 days</option>
+        <option value="7d">Last 7 days</option>
+        <option value="30d">Last 30 days</option>
+        <option value="90d">Last 3 months</option>
+        <option value="180d">Last 6 months</option>
+        <option value="365d">Last 12 months</option>
+      </select>
+    </div>
+    <div class="f" title="Filter by Country"><span class="muted">Country</span>
+      <input id="f_country" placeholder="Any" aria-label="Country Filter"/>
+    </div>
+    <div class="f" title="Filter by City"><span class="muted">City</span>
+      <input id="f_city" placeholder="Any" aria-label="City Filter"/>
+    </div>
+    <div class="f" title="Filter by Minimum Minutes"><span class="muted">Min Minutes</span>
+      <input id="f_minmin" type="number" min="0" step="1" placeholder="0" aria-label="Minimum Minutes"/>
+    </div>
+    <div class="f" title="Search UID / Page / IP"><span class="muted">Search</span>
+      <input id="f_search" placeholder="UID / Page / IP" aria-label="Search"/>
+    </div>
+  </div>
+
+  <div class="lists">
+    <div class="card">
+      <h3>Users List</h3>
+      <div id="tableContainer">
+        <table class="table" id="tbl">
+          <thead>
+            <tr>
+              <th>User Id</th><th>Timestamp</th><th>IP</th><th>City</th><th>Country</th>
+              <th>Last Visit</th><th>Last Duration (m)</th><th>Total Duration (m)</th><th>Status</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="small-muted" id="tbl_note">Showing up to 500 rows (use filters to narrow).</div>
+    </div>
+    <div class="card">
+      <h3>All-time Totals</h3>
+      <div class="muted" id="totals_text">Loading...</div>
+      <canvas class="chart" id="chart_totals"></canvas>
+    </div>
+  </div>
+</section>
+</main>
+
+<script>
+(function(){
+  'use strict';
+  
+  // Configuration
+  const CONFIG = {
+    APPS_SCRIPT_JSON_URL: 'https://script.google.com/macros/s/AKfycbx9MhZOWF68TgH6XwwYazgBeueWLgJbkjAcHgB5ELYcJ5KCZ_OeXx0dmGTuoGq328w/exec?format=json',
+    CSV_URL: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSIOGb5RBMnQiQ-GiHtkOn5qQhGhQnUmCsVie-jSv6UhvMihSQv1JN03Tr1EtoTIfbLThkSgGzNdwqc/pub?output=csv',
+    MAX_ROWS: 500,
+    DEBOUNCE_DELAY: 300,
+    RETRY_ATTEMPTS: 3,
+    RETRY_DELAY: 1000,
+    CACHE_DURATION: 30000 // 30 seconds
+  };
+
+  // State management
+  class DashboardState {
+    constructor() {
+      this.rawRows = [];
+      this.normalizedRowsCache = null;
+      this.cacheTimestamp = 0;
+      this.isLoading = false;
+      this.lastError = null;
+    }
+
+    getNormalizedRows() {
+      const now = Date.now();
+      if (this.normalizedRowsCache && (now - this.cacheTimestamp) < CONFIG.CACHE_DURATION) {
+        return this.normalizedRowsCache;
+      }
+      
+      this.normalizedRowsCache = this.rawRows.map(normalizeRow);
+      this.cacheTimestamp = now;
+      return this.normalizedRowsCache;
+    }
+
+    clearCache() {
+      this.normalizedRowsCache = null;
+      this.cacheTimestamp = 0;
+    }
+  }
+
+  const state = new DashboardState();
+  const byId = id => document.getElementById(id);
+  
+  const filters = {
+    status: byId('f_status'),
+    range: byId('f_range'),
+    country: byId('f_country'),
+    city: byId('f_city'),
+    minmin: byId('f_minmin'),
+    search: byId('f_search')
+  };
+
+  // Utility functions
+  function parseDate(s) {
+    if (!s) return null;
+    
+    // Try ISO parse first
+    let d = new Date(s);
+    if (!isNaN(d)) return d;
+    
+    // Try removing trailing timezone words
+    const cleaned = s.replace(/([A-Za-z]{2,5} ?[+-]?\d{0,4})$/, '').trim();
+    d = new Date(cleaned);
+    if (!isNaN(d)) return d;
+    
+    // Try common formats fallback
+    try {
+      const alt = s.replace(/\//g, '-').replace(/(\d{2})-(\d{2})-(\d{4})/, '$3-$2-$1');
+      d = new Date(alt);
+      if (!isNaN(d)) return d;
+    } catch(e) {}
+    
+    return null;
+  }
+
+  function daysBetween(a, b) {
+    if (!a || !b) return Infinity;
+    return Math.abs(b.getTime() - a.getTime()) / (1000 * 60 * 60 * 24);
+  }
+
+  function hoursBetween(a, b) {
+    if (!a || !b) return Infinity;
+    return Math.abs(b.getTime() - a.getTime()) / (1000 * 60 * 60);
+  }
+
+  function normalizeRow(r) {
+    const now = new Date();
+    const first = parseDate(r['First Visit DateTime'] || r.FirstVisit || r['FirstVisit']);
+    const last = parseDate(r['Last Visit DateTime'] || r.LastVisit || r['LastVisit'] || r.Timestamp);
+    const totalVisits = Number(r['Total Visit Count'] || r.TotalVisitCount || r.totalVisits || 0) || 0;
+    const daysSince = last ? daysBetween(last, now) : Infinity;
+    const hoursSince = last ? hoursBetween(last, now) : Infinity;
+    const ageDays = first ? daysBetween(first, now) : Infinity;
+
+    let status = 'inactive', icon = '🔴';
+    if (hoursSince < 0.1) { status = 'live'; icon = '🟢'; }
+    else if (ageDays <= 15) { status = 'new'; icon = '🆕'; }
+    else if (hoursSince <= 24) { status = 'active-24h'; icon = '🔵'; }
+    else if (daysSince <= 30) { status = 'active'; icon = '🟣'; }
+
+    return {
+      uid: r['Unique User ID'] || r.UID || r.uid || '',
+      timestamp: r.Timestamp || r.timestamp || '',
+      ip: r['IP Address'] || r.IP || r.ip || '',
+      city: r.City || r.city || '',
+      country: r.Country || r.country || '',
+      lastVisit: r['Last Visit DateTime'] || r.LastVisit || r.lastVisit || '',
+      lastDuration: Number(r['Last Visited Duration (minutes)'] || r.LastDurationMin || r.lastDuration || 0) || 0,
+      totalDuration: Number(r['Total Visited Duration (minutes)'] || r.TotalDurationMin || r.totalDuration || 0) || 0,
+      totalVisits,
+      icon, status,
+      page: r['Last Visited Page / Section Name'] || r.LastPage || r.page || ''
+    };
+  }
+
+  function applyFilters(rows) {
+    const s = filters.status.value;
+    const q = (filters.search.value || '').toLowerCase().trim();
+    const ctry = (filters.country.value || '').toLowerCase().trim();
+    const cty = (filters.city.value || '').toLowerCase().trim();
+    const minMin = Number(filters.minmin.value || 0) || 0;
+    const range = filters.range.value;
+
+    const now = new Date();
+    const cutoff = (() => {
+      const map = { '24h':1, '3d':3, '7d':7, '30d':30, '90d':90, '180d':180, '365d':365 };
+      const d = map[range];
+      if (!d) return null;
+      return new Date(now.getTime() - d * 86400000);
+    })();
+
+    return rows.filter(r => {
+      if (s !== 'all') {
+        if (s === 'active' && !(r.status === 'active' || r.status === 'active-24h' || r.status === 'live')) return false;
+        if (s === 'new' && r.status !== 'new') return false;
+        if (s === 'live' && r.status !== 'live') return false;
+        if (s === 'inactive' && r.status !== 'inactive') return false;
+      }
+      if (ctry && !(r.country || '').toLowerCase().includes(ctry)) return false;
+      if (cty && !(r.city || '').toLowerCase().includes(cty)) return false;
+      if (minMin && (r.totalDuration || 0) < minMin) return false;
+      if (q) {
+        const hay = (r.uid + ' ' + r.page + ' ' + r.ip + ' ' + r.city + ' ' + r.country).toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      if (cutoff) {
+        const lv = r.lastVisit ? new Date(r.lastVisit) : null;
+        if (!lv || lv < cutoff) return false;
+      }
+      return true;
+    });
+  }
+
+  function escapeHtml(text) {
+    return String(text).replace(/[&<>"'`=\/]/g, function(s) {
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','/':'&#x2F;','`':'&#x60;','=':'&#x3D;'}[s];
+    });
+  }
+
+  function renderTable(rows) {
+    const tb = byId('tbl').querySelector('tbody');
+    const slice = rows.slice(0, CONFIG.MAX_ROWS);
+    
+    // Use DocumentFragment for better performance
+    const fragment = document.createDocumentFragment();
+    
+    slice.forEach(r => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td><span class="tag"><i>🆔</i>${escapeHtml(r.uid || '')}</span></td>
+        <td>${escapeHtml(r.timestamp || '')}</td>
+        <td>${escapeHtml(r.ip || '')}</td>
+        <td>${escapeHtml(r.city || '')}</td>
+        <td>${escapeHtml(r.country || '')}</td>
+        <td>${escapeHtml(r.lastVisit || '')}</td>
+        <td>${Number(r.lastDuration || 0)}</td>
+        <td>${Number(r.totalDuration || 0)}</td>
+        <td><span class="status-indicator ${r.status}"></span>${r.icon || ''}</td>
+      `;
+      fragment.appendChild(row);
+    });
+    
+    tb.innerHTML = '';
+    tb.appendChild(fragment);
+    
+    byId('tbl_note').textContent = `Showing ${Math.min(rows.length, CONFIG.MAX_ROWS).toLocaleString()} of ${rows.length.toLocaleString()} rows (use filters to narrow).`;
+  }
+
+  function setNum(elId, val) {
+    const el = byId(elId);
+    if (!el) return;
+    
+    const start = Number(el.textContent.replace(/,/g, '') || 0);
+    const end = Number(val || 0);
+    const diff = Math.abs(end - start);
+    const dur = Math.min(1200, 400 + Math.sqrt(diff) * 20);
+    const t0 = performance.now();
+    
+    function step(t) {
+      const p = Math.min(1, (t - t0) / dur);
+      const eased = easeOutCubic(p);
+      const v = Math.round(start + (end - start) * eased);
+      el.textContent = v.toLocaleString();
+      if (p < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  function easeOutCubic(t) {
+    return 1 - Math.pow(1 - t, 3);
+  }
+
+  function spark(elId, data) {
+    const c = byId(elId);
+    if (!c) return;
+    
+    const ctx = c.getContext('2d');
+    const w = c.width = c.clientWidth * devicePixelRatio;
+    const h = c.height = c.clientHeight * devicePixelRatio;
+    
+    ctx.clearRect(0, 0, w, h);
+    if (!data || data.length === 0) return;
+    
+    const n = data.length;
+    let min = Math.min(...data);
+    let max = Math.max(...data);
+    if (min === max) { min = min - 1; max = max + 1; }
+    
+    const pad = 4 * devicePixelRatio;
+    ctx.lineWidth = 2 * devicePixelRatio;
+    ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+    ctx.beginPath();
+    
+    data.forEach((v, i) => {
+      const x = pad + (i / Math.max(1, n-1)) * (w - pad*2);
+      const y = pad + (1 - ((v - min) / (max - min))) * (h - pad*2);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+  }
+
+  function chartTotals(rows) {
+    const c = byId('chart_totals');
+    if (!c) return;
+    
+    const ctx = c.getContext('2d');
+    const w = c.width = c.clientWidth * devicePixelRatio;
+    const h = c.height = c.clientHeight * devicePixelRatio;
+    
+    ctx.clearRect(0, 0, w, h);
+    
+    const buckets = { '≤24h':0, '≤7d':0, '≤30d':0, '>30d':0 };
+    const now = new Date();
+    
+    (rows || state.getNormalizedRows()).forEach(r => {
+      const lv = r.lastVisit ? new Date(r.lastVisit) : null;
+      if (!lv) { buckets['>30d']++; return; }
+      const days = daysBetween(lv, now);
+      if (days <= 1) buckets['≤24h']++;
+      else if (days <= 7) buckets['≤7d']++;
+      else if (days <= 30) buckets['≤30d']++;
+      else buckets['>30d']++;
+    });
+    
+    const keys = Object.keys(buckets);
+    const vals = keys.map(k => buckets[k]);
+    const maxv = Math.max(...vals, 1);
+    
+    const pad = 40 * devicePixelRatio;
+    const availableW = w - pad*2;
+    const barW = Math.min(140*devicePixelRatio, (availableW - (keys.length-1)*20*devicePixelRatio)/keys.length);
+    
+    keys.forEach((k, i) => {
+      const v = vals[i];
+      const x = pad + i*(barW + 30*devicePixelRatio);
+      const y = h - pad;
+      const bh = Math.max(6*devicePixelRatio, (v / maxv) * (h - pad*2));
+      
+      ctx.fillStyle = 'rgba(108,140,255,0.12)';
+      ctx.fillRect(x, y - bh, barW, bh);
+      
+      ctx.fillStyle = '#6c8cff';
+      ctx.fillRect(x, y - bh, barW, Math.min(8*devicePixelRatio, bh));
+      
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      ctx.font = `${12 * devicePixelRatio}px system-ui`;
+      ctx.textAlign = 'center';
+      ctx.fillText(String(v), x + barW/2, y - bh - 10 * devicePixelRatio);
+      
+      ctx.fillStyle = 'rgba(255,255,255,0.65)';
+      ctx.font = `${12 * devicePixelRatio}px system-ui`;
+      ctx.fillText(k, x + barW/2, y + 18 * devicePixelRatio);
+    });
+  }
+
+  function recompute() {
+    if (state.isLoading) return;
+    
+    state.clearCache();
+    const rows = state.getNormalizedRows();
+    const filtered = applyFilters(rows);
+
+    // Update KPIs
+    setNum('k_total', rows.length);
+    const now = new Date();
+    const active30 = rows.filter(r => r.status === 'active' || r.status === 'active-24h' || r.status === 'live').length;
+    setNum('k_active', active30);
+    const inactive = rows.filter(r => r.status === 'inactive').length;
+    setNum('k_inactive', inactive);
+    const live = rows.filter(r => r.status === 'live').length;
+    setNum('k_live', live);
+    const last24 = rows.filter(r => r.lastVisit && hoursBetween(new Date(r.lastVisit), now) <= 24).length;
+    setNum('k_24h', last24);
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    const todayCount = rows.filter(r => { 
+      const lv = r.lastVisit ? new Date(r.lastVisit) : null; 
+      return lv && lv >= todayStart; 
+    }).length;
+    setNum('k_today', todayCount);
+    const last12 = rows.filter(r => r.lastVisit && hoursBetween(new Date(r.lastVisit), now) <= 12).length;
+    setNum('k_12h', last12);
+    const newUsers = rows.filter(r => r.status === 'new').length;
+    setNum('k_new', newUsers);
+    const totalVisitsAll = rows.reduce((a, r) => a + (r.totalVisits || 0), 0);
+    setNum('k_visits', totalVisitsAll);
+
+    renderTable(filtered);
+    chartTotals(rows);
+
+    // Update totals text
+    const totalMinutesAll = rows.reduce((a, r) => a + (r.totalDuration || 0), 0);
+    byId('totals_text').textContent = `All-time visits: ${totalVisitsAll.toLocaleString()} | Minutes: ${Math.round(totalMinutesAll).toLocaleString()}`;
+
+    // Update sparks
+    spark('sp_total', [rows.length, Math.max(1, Math.round(rows.length * 0.7)), Math.max(1, Math.round(rows.length * 0.9)), rows.length]);
+    spark('sp_active', [active30, Math.max(0, active30 - 2), active30 + 1, active30]);
+    spark('sp_inactive', [inactive, Math.max(0, inactive - 1), inactive + 2, inactive]);
+    spark('sp_today', [todayCount, Math.max(0, todayCount - 1), todayCount + 1, todayCount]);
+    spark('sp_live', [live, Math.max(0, live - 1), live + 1, live]);
+    spark('sp_24h', [last24, Math.max(0, last24 - 2), last24 + 1, last24]);
+    spark('sp_12h', [last12, Math.max(0, last12 - 1), last12 + 2, last12]);
+    spark('sp_new', [newUsers, Math.max(0, newUsers - 1), newUsers + 1, newUsers]);
+    spark('sp_visits', [totalVisitsAll || 0, Math.max(0, Math.round(totalVisitsAll * 0.95)), totalVisitsAll + 10, totalVisitsAll || 0]);
+  }
+
+  function parseCsvLine(line) {
+    const result = [];
+    let cur = '', inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQuotes && line[i+1] === '"') { cur += '"'; i++; continue; }
+        inQuotes = !inQuotes;
+        continue;
+      }
+      if (ch === ',' && !inQuotes) { result.push(cur); cur = ''; continue; }
+      cur += ch;
+    }
+    result.push(cur);
+    return result;
+  }
+
+  function fetchCSV(text) {
+    const lines = text.split(/\r?\n/).filter(Boolean);
+    if (lines.length < 2) return [];
+    
+    const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+    const rows = [];
+    
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i];
+      const cols = parseCsvLine(line);
+      if (cols.length === 0) continue;
+      
+      const obj = {};
+      headers.forEach((h, idx) => { 
+        obj[h] = cols[idx] !== undefined ? cols[idx].trim().replace(/^"|"$/g, '') : ''; 
+      });
+      rows.push(obj);
+    }
+    return rows;
+  }
+
+  async function fetchData() {
+    if (state.isLoading) return;
+    
+    state.isLoading = true;
+    byId('totals_text').textContent = 'Loading data...';
+    byId('refreshBtn').textContent = '⏳ Loading...';
+    byId('refreshBtn').disabled = true;
+    
+    try {
+      const response = await fetch(CONFIG.APPS_SCRIPT_JSON_URL, { 
+        cache: 'no-cache',
+        headers: { 'Accept': 'application/json' }
+      });
+      
+      if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      
+      let text = await response.text();
+      let json;
+      
+      try { 
+        json = JSON.parse(text); 
+      } catch(e) {
+        // Try to extract JSON from text
+        const start = text.indexOf('{');
+        const end = text.lastIndexOf('}');
+        if (start >= 0 && end > start) {
+          json = JSON.parse(text.slice(start, end + 1));
+        } else throw e;
+      }
+      
+      // Handle different response formats
+      if (Array.isArray(json)) state.rawRows = json;
+      else if (json.rows && Array.isArray(json.rows)) state.rawRows = json.rows;
+      else if (json.data && Array.isArray(json.data)) state.rawRows = json.data;
+      else if (json.result && Array.isArray(json.result)) state.rawRows = json.result;
+      else {
+        const arr = Object.values(json).find(v => Array.isArray(v));
+        if (arr) state.rawRows = arr;
+        else throw new Error('JSON did not contain expected array');
+      }
+      
+      state.lastError = null;
+      recompute();
+      
+    } catch (error) {
+      console.warn('Apps Script JSON failed, trying CSV fallback:', error);
+      
+      try {
+        const response = await fetch(CONFIG.CSV_URL, { cache: 'no-cache' });
+        if (!response.ok) throw new Error(`CSV fetch failed: ${response.status}`);
+        
+        const text = await response.text();
+        state.rawRows = fetchCSV(text);
+        
+        if (!state.rawRows || state.rawRows.length === 0) {
+          throw new Error('CSV parse returned 0 rows');
+        }
+        
+        state.lastError = null;
+        recompute();
+        
+      } catch (csvError) {
+        state.lastError = 'Failed to load data from both sources. Check URLs & CORS.';
+        byId('totals_text').textContent = state.lastError;
+        console.error('Failed to load data from both sources:', csvError);
+      }
+    } finally {
+      state.isLoading = false;
+      byId('refreshBtn').textContent = '🔄 Refresh';
+      byId('refreshBtn').disabled = false;
+    }
+  }
+
+  function bindFilters() {
+    const handler = debounce(recompute, CONFIG.DEBOUNCE_DELAY);
+    Object.values(filters).forEach(el => {
+      if (!el) return;
+      el.addEventListener('input', handler);
+      el.addEventListener('change', handler);
+    });
+  }
+
+  function debounce(fn, wait) {
+    let t;
+    return function(...a) {
+      clearTimeout(t);
+      t = setTimeout(() => fn.apply(this, a), wait);
+    };
+  }
+
+  // Event listeners
+  byId('refreshBtn').addEventListener('click', fetchData);
+  
+  window.addEventListener('resize', debounce(() => {
+    recompute();
+  }, 250));
+
+  // Initialize
+  bindFilters();
+  fetchData();
+})();
+</script>
+</body>
+</html>
