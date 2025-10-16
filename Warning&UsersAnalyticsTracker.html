@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Warning & Users Analytics Tracker</title>
+  <style>
+    :root {
+      --bg: #0b0b0c;
+      --fg: #f4f6f8;
+      --muted: #a9b0b8;
+      --accent: #7c3aed; /* purple */
+      --accent-2: #22c55e; /* green */
+      --danger: #ef4444;
+      --glass: rgba(255,255,255,0.08);
+      --overlay: rgba(0,0,0,0.88);
+      --card: rgba(20,22,25,0.85);
+      --shadow: 0 10px 30px rgba(0,0,0,0.35);
+      --radius: 1.2rem;
+      --radius-sm: .8rem;
+      --ring: 0 0 0 2px rgba(124,58,237,.25), 0 8px 30px rgba(124,58,237,.25);
+    }
+
+    html, body {
+      padding: 0; margin: 0;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      line-height: 1.4;
+    }
+
+    /* Use rem/em units and responsive base */
+    html { font-size: 100%; }
+    @media (max-width: 600px) {
+      html { font-size: 93.75%; } /* ~15px base */
+    }
+
+    .overlay {
+      position: fixed; inset: 0; z-index: 9999;
+      display: grid; place-items: center;
+      background: var(--overlay);
+      animation: fadeIn .35s ease-out both;
+    }
+    @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+
+    .warning-wrap {
+      width: min(92vw, 44rem);
+      background: linear-gradient(180deg, rgba(34,35,39,.85), rgba(20,22,25,.9));
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 1.25rem;
+      backdrop-filter: blur(8px);
+    }
+
+    .warning-media {
+      display: flex; align-items: center; justify-content: center;
+      aspect-ratio: 16 / 9; border-radius: var(--radius-sm);
+      background: #111;
+      overflow: hidden; position: relative;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.06);
+    }
+    .warning-media img {
+      width: 100%; height: 100%; object-fit: cover; filter: saturate(1.1) contrast(1.05);
+      transform: scale(1.02);
+    }
+
+    .warning-body {
+      text-align: center; padding: 1rem .5rem 0;
+      display: grid; gap: .75rem;
+    }
+    .warning-title {
+      font-weight: 800; letter-spacing: .2px;
+      font-size: 1.25rem; /* Bold Title */
+    }
+    .warning-subtitle {
+      color: var(--muted);
+      font-weight: 500; font-size: .95rem; /* body under title */
+    }
+
+    .warning-note {
+      color: #94a3b8; opacity: .9;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Roboto Mono", monospace;
+      font-size: .75rem; /* tiny note */
+    }
+
+    .cta-row { display: grid; gap: .75rem; justify-items: center; margin-top: .25rem; }
+
+    .cta-btn {
+      cursor: pointer; user-select: none;
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: .9rem 1.2rem; min-width: min(75%, 22rem);
+      border-radius: 999px;
+      background: radial-gradient( 120% 120% at 50% 0%, #8b5cf6, #7c3aed 50%, #6d28d9 100% );
+      color: white; font-weight: 800; font-size: 1.05rem;
+      text-shadow: 0 1px 0 rgba(0,0,0,.35);
+      box-shadow: 0 12px 24px rgba(124,58,237,.35);
+      border: none; outline: none;
+      transition: transform .12s ease, box-shadow .12s ease, filter .2s ease;
+      animation: pulse 1.8s ease-in-out infinite;
+    }
+    .cta-btn:active { transform: translateY(1px) scale(.995) }
+    .cta-btn:hover { box-shadow: 0 16px 32px rgba(124,58,237,.45); filter: brightness(1.02) }
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 12px 24px rgba(124,58,237,.35), 0 0 0 0 rgba(124,58,237,.35) }
+      50% { box-shadow: 0 12px 24px rgba(124,58,237,.35), 0 0 0 12px rgba(124,58,237,0) }
+    }
+
+    .countdown {
+      position: fixed; top: 1rem; right: 1rem; z-index: 10000;
+      width: 3rem; height: 3rem; border-radius: 999px;
+      display: grid; place-items: center; font-weight: 800;
+      color: #fff;
+      background: linear-gradient(180deg, #0f172a, #1f2937);
+      border: 1px solid rgba(255,255,255,.12);
+      box-shadow: var(--ring);
+      font-size: 1.05rem;
+    }
+
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+
+    /* Utility */
+    .muted { color: var(--muted); }
+
+    /* Ensure containers grow with content */
+    .auto-grow { min-height: auto; }
+
+    /* Loading state */
+    .loading { opacity: 0.6; pointer-events: none; }
+  </style>
+</head>
+<body>
+  <div id="warningOverlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="warningTitle">
+    <div class="warning-wrap">
+      <div class="warning-media" aria-hidden="true">
+        <img alt="18+ warning" src="https://www.shutterstock.com/shutterstock/videos/3525945387/thumb/6.jpg?ip=x480" loading="lazy" />
+      </div>
+      <div class="warning-body">
+        <h1 id="warningTitle" class="warning-title">Age Restricted Content 🫦 18+ Only</h1>
+        <p class="warning-subtitle">This app contains content suitable for adults only. By continuing you confirm that you are 18 years of age or older.</p>
+        <div class="cta-row">
+          <button id="continueBtn" class="cta-btn" type="button" aria-label="Continue">🅞🅚⇨🔞☞Continue➤♋</button>
+          <div class="warning-note">If you don't press continue, the app will auto-redirect after the countdown.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="countdownBadge" class="countdown" aria-live="polite" title="Auto-redirect countdown">5</div>
+
+  <script>
+    // ---------- Configuration ----------
+    const CONFIG = {
+      APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycby7UsipuU7m3eFPiMLe2_tKj3zw8k5bTImISKt-OTwLRo_J36x_LzU64J-_UA4IKAYd/exec',
+      SHEET_ID: '11trONTNEuQ4WfmzTynytufAsBhYzgCkCem3L5w2VUvo',
+      COUNTDOWN_DURATION: 5,
+      SECTION_NAME: 'HM',
+      RETRY_ATTEMPTS: 3,
+      RETRY_DELAY: 1000
+    };
+
+    // ---------- Utilities ----------
+    class AnalyticsTracker {
+      constructor() {
+        this.sessionStartMs = Date.now();
+        this.sentExit = false;
+        this.countdownRemaining = CONFIG.COUNTDOWN_DURATION;
+        this.retryCount = 0;
+        this.userAgent = navigator.userAgent || navigator.vendor || window.opera || '';
+        this.deviceType = this.getDeviceType(this.userAgent);
+        this.deviceModel = this.parseDeviceModel(this.userAgent) || (this.deviceType === 'Mobile' ? 'Android WebView' : 'WebView');
+        
+        this.LS_KEYS = {
+          uid: 'xplusbd_uid',
+          first: 'xplusbd_first_visit',
+          visits: 'xplusbd_visit_count',
+          totalMin: 'xplusbd_total_minutes',
+        };
+      }
+
+      generateUid() {
+        try {
+          const buf = new Uint32Array(6);
+          crypto.getRandomValues(buf);
+          return 'USR_' + Array.from(buf).map(n => n.toString(36)).join('').slice(0, 26);
+        } catch (e) {
+          return 'USR_' + (Date.now().toString(36) + Math.random().toString(36).slice(2, 18)).toUpperCase();
+        }
+      }
+
+      getDeviceType(ua) {
+        const s = ua.toLowerCase();
+        if (/tablet|ipad|playbook|silk(?!.*mobile)/.test(s)) return 'Tablet';
+        if (/mobi|android|iphone|ipod|opera mini|iemobile/.test(s)) return 'Mobile';
+        return 'Desktop';
+      }
+
+      parseDeviceModel(ua) {
+        const m = ua.match(/\(([^)]+)\)/);
+        if (!m) return '';
+        const inside = m[1];
+        const parts = inside.split(';').map(x => x.trim());
+        if (parts.length >= 3) return parts[2];
+        return inside;
+      }
+
+      nowIso() { 
+        return new Date().toISOString(); 
+      }
+
+      secondsToMinutes(sec) { 
+        return Math.round((sec / 60) * 100) / 100; 
+      }
+
+      screenResolution() {
+        return `${window.screen.width}x${window.screen.height}`;
+      }
+
+      async fetchIpProfile() {
+        const providers = [
+          () => this.fetchWithTimeout('https://ipapi.co/json/', 5000)
+            .then(r => r.ok ? r.json() : Promise.reject('ipapi.co failed'))
+            .then(j => ({
+              ip: j.ip || '', 
+              country: j.country_name || '', 
+              city: j.city || '',
+              loc: (j.latitude && j.longitude) ? `${j.latitude}, ${j.longitude}` : '',
+            })),
+          () => this.fetchWithTimeout('https://ipwho.is/', 5000)
+            .then(r => r.ok ? r.json() : Promise.reject('ipwho.is failed'))
+            .then(j => ({
+              ip: j.ip || '', 
+              country: j.country || '', 
+              city: j.city || '',
+              loc: (j.latitude && j.longitude) ? `${j.latitude}, ${j.longitude}` : '',
+            })),
+          () => this.fetchWithTimeout('https://api.ipify.org?format=json', 5000)
+            .then(r => r.ok ? r.json() : Promise.reject('ipify failed'))
+            .then(j => ({
+              ip: j.ip || '', 
+              country: '', 
+              city: '', 
+              loc: ''
+            })),
+        ];
+        
+        for (const provider of providers) {
+          try { 
+            const data = await provider(); 
+            return data; 
+          } catch (e) { 
+            console.warn('IP provider failed:', e.message);
+          }
+        }
+        return { ip: '', country: '', city: '', loc: '' };
+      }
+
+      async fetchWithTimeout(url, timeout = 5000) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeout);
+        
+        try {
+          const response = await fetch(url, { 
+            signal: controller.signal,
+            mode: 'cors',
+            cache: 'no-cache'
+          });
+          clearTimeout(timeoutId);
+          return response;
+        } catch (error) {
+          clearTimeout(timeoutId);
+          throw error;
+        }
+      }
+
+      getTimezoneLabel() {
+        try { 
+          return Intl.DateTimeFormat().resolvedOptions().timeZone || ''; 
+        } catch { 
+          return ''; 
+        }
+      }
+
+      async postToAppsScript(payload) {
+        const body = new URLSearchParams({ payload: JSON.stringify(payload) });
+        
+        try {
+          const response = await this.fetchWithTimeout(CONFIG.APPS_SCRIPT_URL, 10000);
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+          return response;
+        } catch (error) {
+          if (this.retryCount < CONFIG.RETRY_ATTEMPTS) {
+            this.retryCount++;
+            console.warn(`Analytics retry ${this.retryCount}/${CONFIG.RETRY_ATTEMPTS}:`, error.message);
+            await new Promise(resolve => setTimeout(resolve, CONFIG.RETRY_DELAY * this.retryCount));
+            return this.postToAppsScript(payload);
+          }
+          throw error;
+        }
+      }
+
+      readLS(key, fallback) {
+        try { 
+          const v = localStorage.getItem(key); 
+          return v == null ? fallback : v; 
+        } catch { 
+          return fallback; 
+        }
+      }
+
+      writeLS(key, val) {
+        try { 
+          localStorage.setItem(key, val); 
+        } catch (e) {
+          console.warn('Failed to write to localStorage:', e.message);
+        }
+      }
+
+      async onPageEnter() {
+        try {
+          let uid = this.readLS(this.LS_KEYS.uid, '');
+          const isNewUser = !uid;
+          
+          if (!uid) { 
+            uid = this.generateUid(); 
+            this.writeLS(this.LS_KEYS.uid, uid); 
+            this.writeLS(this.LS_KEYS.first, this.nowIso()); 
+            this.writeLS(this.LS_KEYS.visits, String(0)); 
+            this.writeLS(this.LS_KEYS.totalMin, String(0)); 
+          }
+
+          const visitCountLocal = Number(this.readLS(this.LS_KEYS.visits, '0')) + 1; 
+          this.writeLS(this.LS_KEYS.visits, String(visitCountLocal));
+
+          const tz = this.getTimezoneLabel();
+          const res = this.screenResolution();
+          const ip = await this.fetchIpProfile();
+
+          const entryTime = this.nowIso();
+
+          const payload = {
+            event: 'page_enter',
+            uid,
+            firstVisitIso: this.readLS(this.LS_KEYS.first, entryTime),
+            entryTime,
+            sectionName: CONFIG.SECTION_NAME,
+            deviceType: this.deviceType,
+            deviceModel: this.deviceModel,
+            userAgent: this.userAgent,
+            screenResolution: res,
+            timezone: tz,
+            ip: ip.ip || '',
+            country: ip.country || '',
+            city: ip.city || '',
+            location: ip.loc || '',
+            visitCountLocal,
+            sheetId: CONFIG.SHEET_ID,
+          };
+
+          await this.postToAppsScript(payload);
+          console.log('Analytics: Page enter tracked successfully');
+        } catch (error) {
+          console.error('Analytics: Failed to track page enter:', error.message);
+        }
+      }
+
+      async onPageExit(reason) {
+        if (this.sentExit) return; 
+        this.sentExit = true;
+        
+        try {
+          const exitTime = this.nowIso();
+          const durationSec = Math.max(0, Math.floor((Date.now() - this.sessionStartMs) / 1000));
+          
+          const payload = {
+            event: 'page_exit',
+            uid: this.readLS(this.LS_KEYS.uid, ''),
+            exitTime,
+            durationMinutes: this.secondsToMinutes(durationSec),
+            sectionName: CONFIG.SECTION_NAME,
+            sheetId: CONFIG.SHEET_ID,
+            reason
+          };
+          
+          await this.postToAppsScript(payload);
+          console.log('Analytics: Page exit tracked successfully');
+          
+          // Update local total minutes hint
+          const prev = Number(this.readLS(this.LS_KEYS.totalMin, '0'));
+          this.writeLS(this.LS_KEYS.totalMin, String(Math.round((prev + payload.durationMinutes) * 100) / 100));
+        } catch (error) {
+          console.error('Analytics: Failed to track page exit:', error.message);
+        }
+      }
+
+      goInternal() {
+        try { 
+          window.location.href = 'go:HM'; 
+        } catch (e) { 
+          console.error('Failed to navigate to internal section:', e.message);
+        }
+      }
+
+      startCountdown() {
+        const badge = document.getElementById('countdownBadge');
+        if (!badge) return;
+        
+        badge.textContent = String(this.countdownRemaining);
+        
+        const interval = setInterval(() => {
+          this.countdownRemaining -= 1;
+          badge.textContent = String(Math.max(0, this.countdownRemaining));
+          
+          if (this.countdownRemaining <= 0) {
+            clearInterval(interval);
+            this.goInternal();
+          }
+        }, 1000);
+      }
+
+      init() {
+        // Set up event listeners
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'hidden') {
+            this.onPageExit('hidden');
+          }
+        });
+        
+        window.addEventListener('pagehide', () => this.onPageExit('pagehide'));
+        window.addEventListener('beforeunload', () => this.onPageExit('beforeunload'));
+
+        // Initialize UI
+        const continueBtn = document.getElementById('continueBtn');
+        if (continueBtn) {
+          continueBtn.addEventListener('click', () => this.goInternal());
+        }
+
+        // Start countdown and analytics
+        this.startCountdown();
+        this.onPageEnter();
+      }
+    }
+
+    // ---------- Initialize ----------
+    document.addEventListener('DOMContentLoaded', () => {
+      const tracker = new AnalyticsTracker();
+      tracker.init();
+    }, { once: true });
+  </script>
+</body>
+</html>
