@@ -1,9 +1,10 @@
 /**
- * Users Analytics Tracker + JSON API for "Users Dashboard" sheet
+ * Enhanced Users Analytics Tracker + JSON API for "Users Dashboard" sheet
  * - Handles POST events: page_enter, page_exit
- * - Exposes GET ?format=json for dashboard
+ * - Exposes GET ?format=json for dashboard with enhanced filtering
  * - Auto-creates sheet/header and sets ArrayFormulas for derived columns
  * - Enhanced with better error handling, logging, and performance optimizations
+ * - Supports dynamic filter options and advanced analytics
  *
  * Deploy as Web App (Anyone with link).
  */
@@ -61,7 +62,9 @@ const COL = (() => {
 const cache = {
   sheetData: null,
   lastFetch: 0,
-  spreadsheet: null
+  spreadsheet: null,
+  filterOptions: null,
+  lastFilterFetch: 0
 };
 
 /**
@@ -239,6 +242,107 @@ class DataProcessor {
 }
 
 /**
+ * Analytics calculator for dashboard metrics
+ */
+class AnalyticsCalculator {
+  static calculateKPIs(data) {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterdayStart = new Date(todayStart.getTime() - 24 * 60 * 60 * 1000);
+    
+    return {
+      total: data.length,
+      active: data.filter(u => this.getUserStatus(u) === 'active').length,
+      inactive: data.filter(u => this.getUserStatus(u) === 'inactive').length,
+      today: data.filter(u => {
+        const lastVisit = new Date(u['Last Visit DateTime']);
+        return lastVisit >= todayStart;
+      }).length,
+      live: data.filter(u => this.getUserStatus(u) === 'live').length,
+      last72h: data.filter(u => {
+        const lastVisit = new Date(u['Last Visit DateTime']);
+        return (now - lastVisit) / (1000 * 60 * 60) <= 72;
+      }).length,
+      last24h: data.filter(u => {
+        const lastVisit = new Date(u['Last Visit DateTime']);
+        return (now - lastVisit) / (1000 * 60 * 60) <= 24;
+      }).length,
+      last12h: data.filter(u => {
+        const lastVisit = new Date(u['Last Visit DateTime']);
+        return (now - lastVisit) / (1000 * 60 * 60) <= 12;
+      }).length,
+      new: data.filter(u => this.getUserStatus(u) === 'new').length,
+      visits: data.reduce((sum, u) => sum + (parseInt(u['Total Visit Count']) || 0), 0)
+    };
+  }
+  
+  static getUserStatus(user) {
+    const lastVisit = new Date(user['Last Visit DateTime']);
+    const firstVisit = new Date(user['First Visit DateTime']);
+    const now = new Date();
+    
+    const daysSinceLastVisit = (now - lastVisit) / (1000 * 60 * 60 * 24);
+    const accountAge = (now - firstVisit) / (1000 * 60 * 60 * 24);
+    
+    if (daysSinceLastVisit < 0.1) return 'live';
+    if (accountAge <= 15) return 'new';
+    if (daysSinceLastVisit <= 30) return 'active';
+    return 'inactive';
+  }
+  
+  static getFilterOptions(data) {
+    const countries = [...new Set(data.map(u => u.Country).filter(Boolean))].sort();
+    const cities = [...new Set(data.map(u => u.City).filter(Boolean))].sort();
+    const ips = [...new Set(data.map(u => u['IP Address']).filter(Boolean))].sort();
+    const statuses = [...new Set(data.map(u => this.getUserStatus(u)))].sort();
+    
+    return {
+      countries,
+      cities,
+      ips,
+      statuses,
+      timeRanges: ['All', 'Today', 'Last 7 Days', 'Last 15 Days', 'Last 30 Days', 'Last 3 Months', 'Last 6 Months', 'Last 1 Year']
+    };
+  }
+  
+  static getActivenessData(data, period) {
+    const now = new Date();
+    const daysDiff = this.getPeriodDays(period);
+    const cutoffDate = new Date(now.getTime() - daysDiff * 24 * 60 * 60 * 1000);
+    
+    return data.filter(user => {
+      const lastVisit = new Date(user['Last Visit DateTime']);
+      return lastVisit >= cutoffDate;
+    }).length;
+  }
+  
+  static getNewUsersData(data, period) {
+    const now = new Date();
+    const daysDiff = this.getPeriodDays(period);
+    const cutoffDate = new Date(now.getTime() - daysDiff * 24 * 60 * 60 * 1000);
+    
+    return data.filter(user => {
+      const firstVisit = new Date(user['First Visit DateTime']);
+      return firstVisit >= cutoffDate;
+    }).length;
+  }
+  
+  static getPeriodDays(period) {
+    const daysMap = {
+      'today': 1,
+      'yesterday': 2,
+      '7d': 7,
+      '15d': 15,
+      '30d': 30,
+      '3m': 90,
+      '6m': 180,
+      '1y': 365
+    };
+    return daysMap[period] || 1;
+  }
+}
+
+/**
  * Web API: GET -> JSON export; POST -> tracking ingest
  */
 function doGet(e) {
@@ -253,47 +357,70 @@ function doGet(e) {
       CONFIG.MAX_ROWS_EXPORT
     );
     const uid = e?.parameter?.uid || null;
+    const includeFilters = e?.parameter?.includeFilters === 'true';
 
     const sheet = ensureSheet(sheetId);
     ensureFormulas(sheet);
 
     if (format === 'json') {
       const rows = readAllRowsAsObjects(sheet, { limit, uid });
-      const responseTime = Date.now() - startTime;
-      Logger.info('JSON export completed', { 
-        rowCount: rows.length, 
-        responseTime: `${responseTime}ms`,
-        limit,
-        uid: uid ? 'filtered' : 'all'
-      });
-      return jsonResponse({ 
+      const response = { 
         ok: true, 
         rows,
         meta: {
           totalRows: rows.length,
-          responseTime: responseTime,
-          timestamp: new Date().toISOString()
+          responseTime: Date.now() - startTime,
+          timestamp: new Date().toISOString(),
+          limit,
+          filtered: !!uid
         }
+      };
+      
+      // Include filter options if requested
+      if (includeFilters) {
+        response.filters = AnalyticsCalculator.getFilterOptions(rows);
+      }
+      
+      Logger.info('JSON export completed', { 
+        rowCount: rows.length, 
+        responseTime: `${Date.now() - startTime}ms`,
+        includeFilters
       });
+      
+      return jsonResponse(response);
     }
 
     // Simple HTML info page if format not specified
     const html = HtmlService.createHtmlOutput(`
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px;">
-        <h2>Users Dashboard Apps Script</h2>
-        <p>✅ Service is running and operational</p>
-        <p><strong>API Endpoints:</strong></p>
-        <ul>
-          <li>GET ?format=json - Export all data as JSON</li>
-          <li>GET ?format=json&limit=100 - Export limited rows</li>
-          <li>GET ?format=json&uid=USER_ID - Export specific user</li>
-          <li>POST - Track page enter/exit events</li>
+      <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; background: #0a0a0a; color: #ffffff; border-radius: 10px;">
+        <h2 style="color: #6c8cff;">📊 Users Dashboard Apps Script</h2>
+        <p style="color: #1ec97f;">✅ Service is running and operational</p>
+        
+        <h3 style="color: #ffcc66; margin-top: 30px;">API Endpoints:</h3>
+        <ul style="color: #96a3c7;">
+          <li><strong>GET ?format=json</strong> - Export all data as JSON</li>
+          <li><strong>GET ?format=json&limit=100</strong> - Export limited rows</li>
+          <li><strong>GET ?format=json&uid=USER_ID</strong> - Export specific user</li>
+          <li><strong>GET ?format=json&includeFilters=true</strong> - Include filter options</li>
+          <li><strong>POST</strong> - Track page enter/exit events</li>
         </ul>
-        <p><strong>Configuration:</strong></p>
-        <ul>
-          <li>Max Export Rows: ${CONFIG.MAX_ROWS_EXPORT}</li>
+        
+        <h3 style="color: #ffcc66; margin-top: 30px;">Configuration:</h3>
+        <ul style="color: #96a3c7;">
+          <li>Max Export Rows: ${CONFIG.MAX_ROWS_EXPORT.toLocaleString()}</li>
           <li>Cache Duration: ${CONFIG.CACHE_DURATION / 1000}s</li>
           <li>Log Level: ${CONFIG.LOG_LEVEL}</li>
+          <li>Sheet ID: ${CONFIG.DEFAULT_SPREADSHEET_ID}</li>
+        </ul>
+        
+        <h3 style="color: #ffcc66; margin-top: 30px;">Analytics Features:</h3>
+        <ul style="color: #96a3c7;">
+          <li>Real-time user tracking</li>
+          <li>Advanced filtering options</li>
+          <li>Dynamic KPI calculations</li>
+          <li>Activeness comparison charts</li>
+          <li>New users growth tracking</li>
+          <li>Mobile-responsive dashboard</li>
         </ul>
       </div>
     `);
@@ -820,6 +947,8 @@ function clearCache() {
   cache.sheetData = null;
   cache.lastFetch = 0;
   cache.spreadsheet = null;
+  cache.filterOptions = null;
+  cache.lastFilterFetch = 0;
   Logger.info('Cache cleared');
 }
 
@@ -845,10 +974,58 @@ function healthCheck() {
         maxRowsExport: CONFIG.MAX_ROWS_EXPORT,
         cacheDuration: CONFIG.CACHE_DURATION,
         logLevel: CONFIG.LOG_LEVEL
-      }
+      },
+      features: [
+        'Real-time user tracking',
+        'Advanced filtering',
+        'Dynamic KPIs',
+        'Activeness comparison',
+        'New users growth',
+        'Mobile-responsive dashboard'
+      ]
     };
   } catch (error) {
     Logger.error('Health check failed', { error: error.message });
+    return {
+      ok: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    };
+  }
+}
+
+/**
+ * Get analytics data for dashboard
+ */
+function getAnalyticsData() {
+  try {
+    const sheet = ensureSheet(CONFIG.DEFAULT_SPREADSHEET_ID);
+    const data = readAllRowsAsObjects(sheet);
+    
+    const kpis = AnalyticsCalculator.calculateKPIs(data);
+    const filterOptions = AnalyticsCalculator.getFilterOptions(data);
+    
+    const periods = ['today', 'yesterday', '7d', '15d', '30d', '3m', '6m', '1y'];
+    const activenessData = periods.map(period => ({
+      period,
+      count: AnalyticsCalculator.getActivenessData(data, period)
+    }));
+    
+    const growthData = periods.map(period => ({
+      period,
+      count: AnalyticsCalculator.getNewUsersData(data, period)
+    }));
+    
+    return {
+      ok: true,
+      kpis,
+      filterOptions,
+      activenessData,
+      growthData,
+      timestamp: new Date().toISOString()
+    };
+  } catch (error) {
+    Logger.error('Failed to get analytics data', { error: error.message });
     return {
       ok: false,
       error: error.message,
