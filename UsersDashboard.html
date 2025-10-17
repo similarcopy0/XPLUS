@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Users Dashboard - Analytics & Management</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
 :root {
   --base-font-size: 16px;
@@ -103,6 +104,7 @@ header {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  font-size: 0.9rem;
 }
 
 .refresh-btn:hover {
@@ -132,7 +134,7 @@ main {
 /* KPI Grid */
 .kpis {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 1rem;
 }
 
@@ -209,6 +211,7 @@ main {
 .kpi.last72 .bubble { background: var(--live); }
 .kpi.last24 .bubble { background: var(--primary); }
 .kpi.last12 .bubble { background: var(--ok); }
+.kpi.yesterday .bubble { background: var(--warn); }
 .kpi.newusers .bubble { background: var(--warn); }
 .kpi.lifetime .bubble { background: var(--err); }
 
@@ -337,6 +340,10 @@ main {
   transition: var(--transition);
   font-size: 0.8rem;
   font-weight: 500;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .chart-toggle.active {
@@ -350,10 +357,58 @@ main {
   color: var(--fg);
 }
 
+.chart-type-toggle {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.chart-type-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+  color: var(--muted);
+  cursor: pointer;
+  transition: var(--transition);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.chart-type-btn.active {
+  background: var(--gradient-primary);
+  color: white;
+  border-color: transparent;
+}
+
 .chart-container {
   height: 300px;
   width: 100%;
   position: relative;
+}
+
+@media (max-width: 600px) {
+  .chart-container {
+    height: 250px;
+  }
+}
+
+.chart-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.last-updated {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
 }
 
 /* Users List Section */
@@ -512,6 +567,20 @@ main {
   .filters {
     padding: 1rem;
   }
+  
+  .chart-card {
+    padding: 1rem;
+  }
+  
+  .chart-controls {
+    gap: 0.25rem;
+  }
+  
+  .chart-toggle {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.75rem;
+    min-height: 32px;
+  }
 }
 
 /* Dark mode enhancements */
@@ -558,6 +627,18 @@ input:focus {
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
+}
+
+/* Skeleton loading animation */
+.skeleton {
+  background: linear-gradient(90deg, rgba(255,255,255,0.1) 25%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.1) 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 </style>
 </head>
@@ -611,6 +692,13 @@ input:focus {
       <div class="bubble"></div>
     </div>
     
+    <div class="kpi yesterday" title="Yesterday's Active Users">
+      <h3>📅 Yesterday Active</h3>
+      <div class="val" id="k_yesterday">0</div>
+      <canvas class="spark" id="sp_yesterday"></canvas>
+      <div class="bubble"></div>
+    </div>
+    
     <div class="kpi live" title="Currently Online Users">
       <h3>🟢 Current Live</h3>
       <div class="val" id="k_live">0</div>
@@ -661,6 +749,7 @@ input:focus {
       <select id="f_timeRange">
         <option value="all">All Time</option>
         <option value="today">Today</option>
+        <option value="yesterday">Yesterday</option>
         <option value="7d">Last 7 Days</option>
         <option value="15d">Last 15 Days</option>
         <option value="30d">Last 30 Days</option>
@@ -729,9 +818,14 @@ input:focus {
   <section class="analytics-section">
     <div class="chart-card">
       <h3>📊 User Activeness Comparison</h3>
+      <div class="chart-type-toggle">
+        <button class="chart-type-btn active" data-type="bar">📊 Bar Chart</button>
+        <button class="chart-type-btn" data-type="line">📈 Line Chart</button>
+      </div>
       <div class="chart-controls">
         <button class="chart-toggle active" data-period="today">Today</button>
         <button class="chart-toggle" data-period="yesterday">Yesterday</button>
+        <button class="chart-toggle" data-period="3d">Last 3 Days</button>
         <button class="chart-toggle" data-period="7d">Last 7 Days</button>
         <button class="chart-toggle" data-period="15d">Last 15 Days</button>
         <button class="chart-toggle" data-period="30d">Last 30 Days</button>
@@ -741,14 +835,21 @@ input:focus {
       </div>
       <div class="chart-container">
         <canvas id="activenessChart"></canvas>
+        <div class="chart-loading hidden" id="activenessLoading">Loading chart data...</div>
       </div>
+      <div class="last-updated" id="activenessLastUpdated">Last updated: Never</div>
     </div>
     
     <div class="chart-card">
       <h3>📈 New Users Growth</h3>
+      <div class="chart-type-toggle">
+        <button class="chart-type-btn active" data-type="bar">📊 Bar Chart</button>
+        <button class="chart-type-btn" data-type="line">📈 Line Chart</button>
+      </div>
       <div class="chart-controls">
         <button class="chart-toggle active" data-period="today">Today</button>
         <button class="chart-toggle" data-period="yesterday">Yesterday</button>
+        <button class="chart-toggle" data-period="3d">Last 3 Days</button>
         <button class="chart-toggle" data-period="7d">Last 7 Days</button>
         <button class="chart-toggle" data-period="15d">Last 15 Days</button>
         <button class="chart-toggle" data-period="30d">Last 30 Days</button>
@@ -758,7 +859,9 @@ input:focus {
       </div>
       <div class="chart-container">
         <canvas id="growthChart"></canvas>
+        <div class="chart-loading hidden" id="growthLoading">Loading chart data...</div>
       </div>
+      <div class="last-updated" id="growthLastUpdated">Last updated: Never</div>
     </div>
   </section>
 
@@ -785,8 +888,12 @@ input:focus {
     MAX_ROWS: 1000,
     DEBOUNCE_DELAY: 300,
     CACHE_DURATION: 30000,
-    REFRESH_INTERVAL: 60000
+    REFRESH_INTERVAL: 300000 // 5 minutes
   };
+
+  // Chart instances
+  let activenessChart = null;
+  let growthChart = null;
 
   // State management
   class DashboardState {
@@ -795,13 +902,14 @@ input:focus {
       this.filteredData = [];
       this.isLoading = false;
       this.lastUpdate = 0;
-      this.charts = {};
+      this.visitHistory = [];
     }
 
     setData(data) {
       this.rawData = data;
       this.lastUpdate = Date.now();
       this.applyFilters();
+      this.updateCharts();
     }
 
     applyFilters() {
@@ -833,6 +941,9 @@ input:focus {
         switch (filters.timeRange) {
           case 'today':
             if (daysDiff > 1) return false;
+            break;
+          case 'yesterday':
+            if (daysDiff < 1 || daysDiff > 2) return false;
             break;
           case '7d':
             if (daysDiff > 7) return false;
@@ -914,12 +1025,13 @@ input:focus {
     updateUI() {
       this.updateKPIs();
       this.updateUsersList();
-      this.updateCharts();
     }
 
     updateKPIs() {
       const now = new Date();
       const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const yesterdayStart = new Date(todayStart.getTime() - 24 * 60 * 60 * 1000);
+      const yesterdayEnd = new Date(todayStart.getTime() - 1);
       
       const kpis = {
         total: this.rawData.length,
@@ -939,6 +1051,11 @@ input:focus {
         today: this.rawData.filter(u => {
           const lastVisit = new Date(u['Last Visit DateTime']);
           return lastVisit >= todayStart;
+        }).length,
+        // Yesterday's Active - Last Visit DateTime yesterday
+        yesterday: this.rawData.filter(u => {
+          const lastVisit = new Date(u['Last Visit DateTime']);
+          return lastVisit >= yesterdayStart && lastVisit <= yesterdayEnd;
         }).length,
         // Current Live - Last Visit DateTime within last 30 minutes
         live: this.rawData.filter(u => {
@@ -1046,138 +1163,270 @@ input:focus {
     }
 
     updateCharts() {
-      // Chart update logic will be implemented here
       this.updateActivenessChart();
       this.updateGrowthChart();
     }
 
     updateActivenessChart() {
       const canvas = document.getElementById('activenessChart');
+      const loading = document.getElementById('activenessLoading');
+      const lastUpdated = document.getElementById('activenessLastUpdated');
+      
       if (!canvas) return;
       
-      const ctx = canvas.getContext('2d');
-      const container = canvas.parentElement;
-      canvas.width = container.clientWidth * window.devicePixelRatio;
-      canvas.height = container.clientHeight * window.devicePixelRatio;
-      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+      loading.classList.remove('hidden');
       
-      // Clear canvas
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // Get active period
+      const activePeriod = document.querySelector('.chart-toggle.active[data-period]')?.dataset.period || 'today';
+      const chartType = document.querySelector('.chart-type-btn.active[data-type]')?.dataset.type || 'bar';
       
-      // Simple bar chart implementation
-      const periods = ['Today', 'Yesterday', '7d', '15d', '30d', '3m', '6m', '1y'];
-      const data = periods.map(period => this.getPeriodData(period));
-      const maxValue = Math.max(...data);
+      const data = this.getActivenessData(activePeriod);
       
-      const barWidth = (container.clientWidth - 40) / periods.length;
-      const barHeight = container.clientHeight - 40;
-      
-      periods.forEach((period, index) => {
-        const height = (data[index] / maxValue) * barHeight;
-        const x = 20 + index * barWidth;
-        const y = container.clientHeight - height - 20;
+      setTimeout(() => {
+        loading.classList.add('hidden');
         
-        // Bar
-        ctx.fillStyle = `hsl(${index * 45}, 70%, 60%)`;
-        ctx.fillRect(x, y, barWidth - 4, height);
+        if (activenessChart) {
+          activenessChart.destroy();
+        }
         
-        // Label
-        ctx.fillStyle = '#96a3c7';
-        ctx.font = '10px system-ui';
-        ctx.textAlign = 'center';
-        ctx.fillText(period, x + barWidth/2, container.clientHeight - 5);
+        const ctx = canvas.getContext('2d');
+        activenessChart = new Chart(ctx, {
+          type: chartType,
+          data: {
+            labels: data.labels,
+            datasets: [{
+              label: 'Active Users',
+              data: data.values,
+              backgroundColor: data.colors,
+              borderColor: data.colors,
+              borderWidth: 2,
+              tension: chartType === 'line' ? 0.4 : 0
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: false
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                grid: {
+                  color: 'rgba(255, 255, 255, 0.1)'
+                },
+                ticks: {
+                  color: '#96a3c7'
+                }
+              },
+              x: {
+                grid: {
+                  color: 'rgba(255, 255, 255, 0.1)'
+                },
+                ticks: {
+                  color: '#96a3c7',
+                  maxRotation: 45
+                }
+              }
+            }
+          }
+        });
         
-        // Value
-        ctx.fillStyle = '#eaf0ff';
-        ctx.font = 'bold 12px system-ui';
-        ctx.fillText(this.formatNumber(data[index]), x + barWidth/2, y - 5);
-      });
+        lastUpdated.textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
+      }, 500);
     }
 
     updateGrowthChart() {
       const canvas = document.getElementById('growthChart');
+      const loading = document.getElementById('growthLoading');
+      const lastUpdated = document.getElementById('growthLastUpdated');
+      
       if (!canvas) return;
       
-      const ctx = canvas.getContext('2d');
-      const container = canvas.parentElement;
-      canvas.width = container.clientWidth * window.devicePixelRatio;
-      canvas.height = container.clientHeight * window.devicePixelRatio;
-      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+      loading.classList.remove('hidden');
       
-      // Clear canvas
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // Get active period
+      const activePeriod = document.querySelector('.chart-toggle.active[data-period]')?.dataset.period || 'today';
+      const chartType = document.querySelector('.chart-type-btn.active[data-type]')?.dataset.type || 'bar';
       
-      // Simple line chart implementation
-      const periods = ['Today', 'Yesterday', '7d', '15d', '30d', '3m', '6m', '1y'];
-      const data = periods.map(period => this.getNewUsersData(period));
-      const maxValue = Math.max(...data);
+      const data = this.getGrowthData(activePeriod);
       
-      const stepX = (container.clientWidth - 40) / (periods.length - 1);
-      const stepY = (container.clientHeight - 40) / maxValue;
-      
-      ctx.strokeStyle = '#6c8cff';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      
-      periods.forEach((period, index) => {
-        const x = 20 + index * stepX;
-        const y = container.clientHeight - 20 - (data[index] * stepY);
+      setTimeout(() => {
+        loading.classList.add('hidden');
         
-        if (index === 0) {
-          ctx.moveTo(x, y);
-        } else {
-          ctx.lineTo(x, y);
+        if (growthChart) {
+          growthChart.destroy();
         }
-      });
-      
-      ctx.stroke();
-      
-      // Points
-      ctx.fillStyle = '#6c8cff';
-      periods.forEach((period, index) => {
-        const x = 20 + index * stepX;
-        const y = container.clientHeight - 20 - (data[index] * stepY);
         
-        ctx.beginPath();
-        ctx.arc(x, y, 4, 0, 2 * Math.PI);
-        ctx.fill();
-      });
+        const ctx = canvas.getContext('2d');
+        growthChart = new Chart(ctx, {
+          type: chartType,
+          data: {
+            labels: data.labels,
+            datasets: [{
+              label: 'New Users',
+              data: data.values,
+              backgroundColor: data.colors,
+              borderColor: data.colors,
+              borderWidth: 2,
+              tension: chartType === 'line' ? 0.4 : 0
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: false
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                grid: {
+                  color: 'rgba(255, 255, 255, 0.1)'
+                },
+                ticks: {
+                  color: '#96a3c7'
+                }
+              },
+              x: {
+                grid: {
+                  color: 'rgba(255, 255, 255, 0.1)'
+                },
+                ticks: {
+                  color: '#96a3c7',
+                  maxRotation: 45
+                }
+              }
+            }
+          }
+        });
+        
+        lastUpdated.textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
+      }, 500);
     }
 
-    getPeriodData(period) {
+    getActivenessData(period) {
       const now = new Date();
-      const daysDiff = this.getPeriodDays(period);
-      const cutoffDate = new Date(now.getTime() - daysDiff * 24 * 60 * 60 * 1000);
+      const periods = this.getPeriods(period);
+      
+      const data = periods.map(p => {
+        const count = this.getActivenessCount(p);
+        return {
+          label: p.label,
+          value: count,
+          color: p.color
+        };
+      });
+      
+      return {
+        labels: data.map(d => d.label),
+        values: data.map(d => d.value),
+        colors: data.map(d => d.color)
+      };
+    }
+
+    getGrowthData(period) {
+      const now = new Date();
+      const periods = this.getPeriods(period);
+      
+      const data = periods.map(p => {
+        const count = this.getGrowthCount(p);
+        return {
+          label: p.label,
+          value: count,
+          color: p.color
+        };
+      });
+      
+      return {
+        labels: data.map(d => d.label),
+        values: data.map(d => d.value),
+        colors: data.map(d => d.color)
+      };
+    }
+
+    getPeriods(period) {
+      const now = new Date();
+      const colors = ['#6c8cff', '#1ec97f', '#ffcc66', '#ff5a78', '#37b5ff', '#8b5cf6', '#f59e0b', '#ef4444'];
+      
+      switch (period) {
+        case 'today':
+          return [
+            { label: 'Today', days: 1, color: colors[0] }
+          ];
+        case 'yesterday':
+          return [
+            { label: 'Yesterday', days: 2, color: colors[1] }
+          ];
+        case '3d':
+          return [
+            { label: 'Today', days: 1, color: colors[0] },
+            { label: 'Yesterday', days: 2, color: colors[1] },
+            { label: 'Day Before', days: 3, color: colors[2] }
+          ];
+        case '7d':
+          return Array.from({ length: 7 }, (_, i) => ({
+            label: `Day ${i + 1}`,
+            days: i + 1,
+            color: colors[i % colors.length]
+          }));
+        case '15d':
+          return Array.from({ length: 15 }, (_, i) => ({
+            label: `Day ${i + 1}`,
+            days: i + 1,
+            color: colors[i % colors.length]
+          }));
+        case '30d':
+          return Array.from({ length: 30 }, (_, i) => ({
+            label: `Day ${i + 1}`,
+            days: i + 1,
+            color: colors[i % colors.length]
+          }));
+        case '3m':
+          return Array.from({ length: 12 }, (_, i) => ({
+            label: `Week ${i + 1}`,
+            days: (i + 1) * 7,
+            color: colors[i % colors.length]
+          }));
+        case '6m':
+          return Array.from({ length: 24 }, (_, i) => ({
+            label: `Week ${i + 1}`,
+            days: (i + 1) * 7,
+            color: colors[i % colors.length]
+          }));
+        case '1y':
+          return Array.from({ length: 12 }, (_, i) => ({
+            label: `Month ${i + 1}`,
+            days: (i + 1) * 30,
+            color: colors[i % colors.length]
+          }));
+        default:
+          return [{ label: 'Today', days: 1, color: colors[0] }];
+      }
+    }
+
+    getActivenessCount(period) {
+      const now = new Date();
+      const cutoffDate = new Date(now.getTime() - period.days * 24 * 60 * 60 * 1000);
       
       return this.rawData.filter(user => {
         const lastVisit = new Date(user['Last Visit DateTime']);
-        return lastVisit >= cutoffDate;
+        return lastVisit >= cutoffDate && lastVisit <= now;
       }).length;
     }
 
-    getNewUsersData(period) {
+    getGrowthCount(period) {
       const now = new Date();
-      const daysDiff = this.getPeriodDays(period);
-      const cutoffDate = new Date(now.getTime() - daysDiff * 24 * 60 * 60 * 1000);
+      const cutoffDate = new Date(now.getTime() - period.days * 24 * 60 * 60 * 1000);
       
       return this.rawData.filter(user => {
         const firstVisit = new Date(user['First Visit DateTime']);
-        return firstVisit >= cutoffDate;
+        return firstVisit >= cutoffDate && firstVisit <= now;
       }).length;
-    }
-
-    getPeriodDays(period) {
-      const daysMap = {
-        'today': 1,
-        'yesterday': 2,
-        '7d': 7,
-        '15d': 15,
-        '30d': 30,
-        '3m': 90,
-        '6m': 180,
-        '1y': 365
-      };
-      return daysMap[period] || 1;
     }
 
     animateNumber(elementId, targetValue) {
@@ -1251,6 +1500,18 @@ input:focus {
       toggle.parentElement.querySelectorAll('.chart-toggle').forEach(t => t.classList.remove('active'));
       // Add active class to clicked toggle
       toggle.classList.add('active');
+      // Update charts
+      dashboard.updateCharts();
+    });
+  });
+  
+  // Chart type toggle listeners
+  document.querySelectorAll('.chart-type-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      // Remove active class from siblings
+      btn.parentElement.querySelectorAll('.chart-type-btn').forEach(t => t.classList.remove('active'));
+      // Add active class to clicked button
+      btn.classList.add('active');
       // Update charts
       dashboard.updateCharts();
     });
@@ -1393,7 +1654,7 @@ input:focus {
     };
   }
   
-  // Auto-refresh
+  // Auto-refresh every 5 minutes
   setInterval(() => {
     if (!dashboard.isLoading) {
       fetchData();
@@ -1405,7 +1666,8 @@ input:focus {
   
   // Handle window resize
   window.addEventListener('resize', debounce(() => {
-    dashboard.updateCharts();
+    if (activenessChart) activenessChart.resize();
+    if (growthChart) growthChart.resize();
   }, 250));
   
 })();

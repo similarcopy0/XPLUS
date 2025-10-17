@@ -5,6 +5,7 @@
  * - Auto-creates sheet/header and sets ArrayFormulas for derived columns
  * - Enhanced with better error handling, logging, and performance optimizations
  * - Supports dynamic filter options and advanced analytics
+ * - Includes Visit History tracking for Yesterday Active calculations
  *
  * Deploy as Web App (Anyone with link).
  */
@@ -12,6 +13,7 @@
 const CONFIG = {
   DEFAULT_SPREADSHEET_ID: '11trONTNEuQ4WfmzTynytufAsBhYzgCkCem3L5w2VUvo',
   SHEET_NAME: 'Users Dashboard',
+  VISIT_HISTORY_SHEET: 'Visit_History',
   MAX_RETRIES: 3,
   LOCK_TIMEOUT: 15000,
   CACHE_DURATION: 300000, // 5 minutes
@@ -58,13 +60,25 @@ const COL = (() => {
   return Object.freeze(map);
 })();
 
+// Visit History headers
+const VISIT_HISTORY_HEADERS = [
+  'Timestamp',
+  'User ID',
+  'Previous Last Visit',
+  'New Last Visit',
+  'Visit Date',
+  'Action Type'
+];
+
 // Cache for performance
 const cache = {
   sheetData: null,
   lastFetch: 0,
   spreadsheet: null,
   filterOptions: null,
-  lastFilterFetch: 0
+  lastFilterFetch: 0,
+  visitHistory: null,
+  lastHistoryFetch: 0
 };
 
 /**
@@ -115,6 +129,76 @@ function getOrCreateErrorLogSheet() {
     sheet.getRange(1, 1, 1, 4).setValues([['Timestamp', 'Level', 'Message', 'Data']]);
   }
   return sheet;
+}
+
+/**
+ * Get or create visit history sheet
+ */
+function getOrCreateVisitHistorySheet() {
+  const ss = SpreadsheetApp.openById(CONFIG.DEFAULT_SPREADSHEET_ID);
+  let sheet = ss.getSheetByName(CONFIG.VISIT_HISTORY_SHEET);
+  if (!sheet) {
+    sheet = ss.insertSheet(CONFIG.VISIT_HISTORY_SHEET);
+    sheet.getRange(1, 1, 1, VISIT_HISTORY_HEADERS.length).setValues([VISIT_HISTORY_HEADERS]);
+    Logger.info('Created Visit History sheet');
+  }
+  return sheet;
+}
+
+/**
+ * Log visit history when Last Visit DateTime changes
+ */
+function logVisitHistory(userId, previousLastVisit, newLastVisit, actionType = 'page_enter') {
+  try {
+    const historySheet = getOrCreateVisitHistorySheet();
+    const now = new Date();
+    const visitDate = new Date(newLastVisit);
+    
+    const historyRow = [
+      now,
+      userId,
+      previousLastVisit ? new Date(previousLastVisit) : '',
+      new Date(newLastVisit),
+      visitDate,
+      actionType
+    ];
+    
+    historySheet.appendRow(historyRow);
+    Logger.debug('Logged visit history', { userId, actionType });
+  } catch (error) {
+    Logger.error('Failed to log visit history', { error: error.message, userId });
+  }
+}
+
+/**
+ * Get yesterday's active users from visit history
+ */
+function getYesterdayActiveUsers() {
+  try {
+    const historySheet = getOrCreateVisitHistorySheet();
+    const lastRow = historySheet.getLastRow();
+    if (lastRow < 2) return 0;
+    
+    const now = new Date();
+    const yesterdayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+    const yesterdayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    const data = historySheet.getRange(2, 1, lastRow - 1, VISIT_HISTORY_HEADERS.length).getValues();
+    const yesterdayVisits = new Set();
+    
+    data.forEach(row => {
+      const visitDate = new Date(row[4]); // Visit Date column
+      if (visitDate >= yesterdayStart && visitDate < yesterdayEnd) {
+        yesterdayVisits.add(row[1]); // User ID
+      }
+    });
+    
+    Logger.debug('Yesterday active users calculated', { count: yesterdayVisits.size });
+    return yesterdayVisits.size;
+  } catch (error) {
+    Logger.error('Failed to get yesterday active users', { error: error.message });
+    return 0;
+  }
 }
 
 /**
@@ -248,6 +332,8 @@ class AnalyticsCalculator {
   static calculateKPIs(data) {
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterdayStart = new Date(todayStart.getTime() - 24 * 60 * 60 * 1000);
+    const yesterdayEnd = new Date(todayStart.getTime() - 1);
     
     return {
       total: data.length,
@@ -268,6 +354,8 @@ class AnalyticsCalculator {
         const lastVisit = new Date(u['Last Visit DateTime']);
         return lastVisit >= todayStart;
       }).length,
+      // Yesterday's Active - from visit history
+      yesterday: getYesterdayActiveUsers(),
       // Current Live - Last Visit DateTime within last 30 minutes
       live: data.filter(u => {
         const lastVisit = new Date(u['Last Visit DateTime']);
@@ -332,7 +420,7 @@ class AnalyticsCalculator {
       cities,
       ips,
       statuses,
-      timeRanges: ['All Time', 'Today', 'Last 7 Days', 'Last 15 Days', 'Last 30 Days', 'Last 3 Months', 'Last 6 Months', 'Last 1 Year']
+      timeRanges: ['All Time', 'Today', 'Yesterday', 'Last 7 Days', 'Last 15 Days', 'Last 30 Days', 'Last 3 Months', 'Last 6 Months', 'Last 1 Year']
     };
   }
   
@@ -389,6 +477,7 @@ function doGet(e) {
     );
     const uid = e?.parameter?.uid || null;
     const includeFilters = e?.parameter?.includeFilters === 'true';
+    const includeAnalytics = e?.parameter?.includeAnalytics === 'true';
 
     const sheet = ensureSheet(sheetId);
     ensureFormulas(sheet);
@@ -412,10 +501,16 @@ function doGet(e) {
         response.filters = AnalyticsCalculator.getFilterOptions(rows);
       }
       
+      // Include analytics data if requested
+      if (includeAnalytics) {
+        response.analytics = AnalyticsCalculator.calculateKPIs(rows);
+      }
+      
       Logger.info('JSON export completed', { 
         rowCount: rows.length, 
         responseTime: `${Date.now() - startTime}ms`,
-        includeFilters
+        includeFilters,
+        includeAnalytics
       });
       
       return jsonResponse(response);
@@ -433,6 +528,7 @@ function doGet(e) {
           <li><strong>GET ?format=json&limit=100</strong> - Export limited rows</li>
           <li><strong>GET ?format=json&uid=USER_ID</strong> - Export specific user</li>
           <li><strong>GET ?format=json&includeFilters=true</strong> - Include filter options</li>
+          <li><strong>GET ?format=json&includeAnalytics=true</strong> - Include analytics data</li>
           <li><strong>POST</strong> - Track page enter/exit events</li>
         </ul>
         
@@ -442,6 +538,7 @@ function doGet(e) {
           <li>Cache Duration: ${CONFIG.CACHE_DURATION / 1000}s</li>
           <li>Log Level: ${CONFIG.LOG_LEVEL}</li>
           <li>Sheet ID: ${CONFIG.DEFAULT_SPREADSHEET_ID}</li>
+          <li>Visit History: ${CONFIG.VISIT_HISTORY_SHEET}</li>
         </ul>
         
         <h3 style="color: #ffcc66; margin-top: 30px;">Analytics Features:</h3>
@@ -451,6 +548,7 @@ function doGet(e) {
           <li>Dynamic KPI calculations</li>
           <li>Activeness comparison charts</li>
           <li>New users growth tracking</li>
+          <li>Yesterday active users tracking</li>
           <li>Mobile-responsive dashboard</li>
         </ul>
       </div>
@@ -717,7 +815,7 @@ function setIfDifferent(sheet, row, col, formula) {
 }
 
 /**
- * Enhanced page enter handler
+ * Enhanced page enter handler with visit history logging
  */
 function handlePageEnter(sheet, body) {
   const uid = String(body.uid || '').trim();
@@ -756,6 +854,10 @@ function handlePageEnter(sheet, body) {
     row[idx('Notes / Admin Tag')] = '';
 
     sheet.appendRow(row);
+    
+    // Log visit history for new user
+    logVisitHistory(uid, null, entryIso, 'page_enter');
+    
     Logger.info('New user created successfully', { uid });
     return { ok: true, created: true, uid };
     
@@ -768,6 +870,7 @@ function handlePageEnter(sheet, body) {
 
     const prevTotalDur = toNumber(vals[idx('Total Visited Duration (minutes)')]);
     const prevVisitCount = toNumber(vals[idx('Total Visit Count')]);
+    const previousLastVisit = vals[idx('Last Visit DateTime')];
 
     vals[idx('Timestamp')] = now;
     vals[idx('Last Visit DateTime')] = new Date(entryIso);
@@ -793,6 +896,12 @@ function handlePageEnter(sheet, body) {
     vals[idx('Total Visited Duration (minutes)')] = prevTotalDur || 0;
 
     rng.setValues([vals]);
+    
+    // Log visit history if Last Visit DateTime changed
+    if (previousLastVisit && previousLastVisit.toString() !== new Date(entryIso).toString()) {
+      logVisitHistory(uid, previousLastVisit, entryIso, 'page_enter');
+    }
+    
     Logger.info('User updated successfully', { uid, visitCount: prevVisitCount + 1 });
     return { ok: true, updated: true, uid };
   }
@@ -980,6 +1089,8 @@ function clearCache() {
   cache.spreadsheet = null;
   cache.filterOptions = null;
   cache.lastFilterFetch = 0;
+  cache.visitHistory = null;
+  cache.lastHistoryFetch = 0;
   Logger.info('Cache cleared');
 }
 
@@ -1004,7 +1115,8 @@ function healthCheck() {
       config: {
         maxRowsExport: CONFIG.MAX_ROWS_EXPORT,
         cacheDuration: CONFIG.CACHE_DURATION,
-        logLevel: CONFIG.LOG_LEVEL
+        logLevel: CONFIG.LOG_LEVEL,
+        visitHistorySheet: CONFIG.VISIT_HISTORY_SHEET
       },
       features: [
         'Real-time user tracking',
@@ -1012,6 +1124,8 @@ function healthCheck() {
         'Dynamic KPIs',
         'Activeness comparison',
         'New users growth',
+        'Yesterday active tracking',
+        'Visit history logging',
         'Mobile-responsive dashboard'
       ]
     };
