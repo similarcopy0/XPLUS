@@ -102,7 +102,7 @@
     .cta-btn:active { transform: translateY(1px) scale(.995) }
     .cta-btn:hover { box-shadow: 0 16px 32px rgba(124,58,237,.45); filter: brightness(1.02) }
     @keyframes pulse {
-      0%, 100% { box-shadow: 0 12px 24px rgba(124,58,237,.35), 0 0 0 0 rgba(124,58,237,.35) }
+      0%, 100% { box-shadow: 0 12px 24px rgba(124,58,237,.35), 0 0 0 0 rgba(124,58,237,0) }
       50% { box-shadow: 0 12px 24px rgba(124,58,237,.35), 0 0 0 12px rgba(124,58,237,0) }
     }
 
@@ -124,16 +124,13 @@
 
     /* Ensure containers grow with content */
     .auto-grow { min-height: auto; }
-
-    /* Loading state */
-    .loading { opacity: 0.6; pointer-events: none; }
   </style>
 </head>
 <body>
   <div id="warningOverlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="warningTitle">
     <div class="warning-wrap">
       <div class="warning-media" aria-hidden="true">
-        <img alt="18+ warning" src="https://www.shutterstock.com/shutterstock/videos/3525945387/thumb/6.jpg?ip=x480" loading="lazy" />
+        <img alt="18+ warning" src="https://www.shutterstock.com/shutterstock/videos/3525945387/thumb/6.jpg?ip=x480" />
       </div>
       <div class="warning-body">
         <h1 id="warningTitle" class="warning-title">Age Restricted Content 🫦 18+ Only</h1>
@@ -150,303 +147,198 @@
 
   <script>
     // ---------- Configuration ----------
-    const CONFIG = {
-      APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycby7UsipuU7m3eFPiMLe2_tKj3zw8k5bTImISKt-OTwLRo_J36x_LzU64J-_UA4IKAYd/exec',
-      SHEET_ID: '11trONTNEuQ4WfmzTynytufAsBhYzgCkCem3L5w2VUvo',
-      COUNTDOWN_DURATION: 5,
-      SECTION_NAME: 'HM',
-      RETRY_ATTEMPTS: 3,
-      RETRY_DELAY: 1000
-    };
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzKhap5QrxOMtDageJim9zCQp3lZRLN0zXwrYYeBdZoOTI2Hq8z9nvSaEGZ5Nbt6dcP/exec';
+    const SHEET_ID = '1HRIjf-x7lnxhqXbMzK0QONG0edbBMpIvI2kkfNWJTC4';
 
     // ---------- Utilities ----------
-    class AnalyticsTracker {
-      constructor() {
-        this.sessionStartMs = Date.now();
-        this.sentExit = false;
-        this.countdownRemaining = CONFIG.COUNTDOWN_DURATION;
-        this.retryCount = 0;
-        this.userAgent = navigator.userAgent || navigator.vendor || window.opera || '';
-        this.deviceType = this.getDeviceType(this.userAgent);
-        this.deviceModel = this.parseDeviceModel(this.userAgent) || (this.deviceType === 'Mobile' ? 'Android WebView' : 'WebView');
-        
-        this.LS_KEYS = {
-          uid: 'xplusbd_uid',
-          first: 'xplusbd_first_visit',
-          visits: 'xplusbd_visit_count',
-          totalMin: 'xplusbd_total_minutes',
-        };
-      }
-
-      generateUid() {
-        try {
-          const buf = new Uint32Array(6);
-          crypto.getRandomValues(buf);
-          return 'USR_' + Array.from(buf).map(n => n.toString(36)).join('').slice(0, 26);
-        } catch (e) {
-          return 'USR_' + (Date.now().toString(36) + Math.random().toString(36).slice(2, 18)).toUpperCase();
-        }
-      }
-
-      getDeviceType(ua) {
-        const s = ua.toLowerCase();
-        if (/tablet|ipad|playbook|silk(?!.*mobile)/.test(s)) return 'Tablet';
-        if (/mobi|android|iphone|ipod|opera mini|iemobile/.test(s)) return 'Mobile';
-        return 'Desktop';
-      }
-
-      parseDeviceModel(ua) {
-        const m = ua.match(/\(([^)]+)\)/);
-        if (!m) return '';
-        const inside = m[1];
-        const parts = inside.split(';').map(x => x.trim());
-        if (parts.length >= 3) return parts[2];
-        return inside;
-      }
-
-      nowIso() { 
-        return new Date().toISOString(); 
-      }
-
-      secondsToMinutes(sec) { 
-        return Math.round((sec / 60) * 100) / 100; 
-      }
-
-      screenResolution() {
-        return `${window.screen.width}x${window.screen.height}`;
-      }
-
-      async fetchIpProfile() {
-        const providers = [
-          () => this.fetchWithTimeout('https://ipapi.co/json/', 5000)
-            .then(r => r.ok ? r.json() : Promise.reject('ipapi.co failed'))
-            .then(j => ({
-              ip: j.ip || '', 
-              country: j.country_name || '', 
-              city: j.city || '',
-              loc: (j.latitude && j.longitude) ? `${j.latitude}, ${j.longitude}` : '',
-            })),
-          () => this.fetchWithTimeout('https://ipwho.is/', 5000)
-            .then(r => r.ok ? r.json() : Promise.reject('ipwho.is failed'))
-            .then(j => ({
-              ip: j.ip || '', 
-              country: j.country || '', 
-              city: j.city || '',
-              loc: (j.latitude && j.longitude) ? `${j.latitude}, ${j.longitude}` : '',
-            })),
-          () => this.fetchWithTimeout('https://api.ipify.org?format=json', 5000)
-            .then(r => r.ok ? r.json() : Promise.reject('ipify failed'))
-            .then(j => ({
-              ip: j.ip || '', 
-              country: '', 
-              city: '', 
-              loc: ''
-            })),
-        ];
-        
-        for (const provider of providers) {
-          try { 
-            const data = await provider(); 
-            return data; 
-          } catch (e) { 
-            console.warn('IP provider failed:', e.message);
-          }
-        }
-        return { ip: '', country: '', city: '', loc: '' };
-      }
-
-      async fetchWithTimeout(url, timeout = 5000) {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), timeout);
-        
-        try {
-          const response = await fetch(url, { 
-            signal: controller.signal,
-            mode: 'cors',
-            cache: 'no-cache'
-          });
-          clearTimeout(timeoutId);
-          return response;
-        } catch (error) {
-          clearTimeout(timeoutId);
-          throw error;
-        }
-      }
-
-      getTimezoneLabel() {
-        try { 
-          return Intl.DateTimeFormat().resolvedOptions().timeZone || ''; 
-        } catch { 
-          return ''; 
-        }
-      }
-
-      async postToAppsScript(payload) {
-        const body = new URLSearchParams({ payload: JSON.stringify(payload) });
-        
-        try {
-          const response = await this.fetchWithTimeout(CONFIG.APPS_SCRIPT_URL, 10000);
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-          }
-          return response;
-        } catch (error) {
-          if (this.retryCount < CONFIG.RETRY_ATTEMPTS) {
-            this.retryCount++;
-            console.warn(`Analytics retry ${this.retryCount}/${CONFIG.RETRY_ATTEMPTS}:`, error.message);
-            await new Promise(resolve => setTimeout(resolve, CONFIG.RETRY_DELAY * this.retryCount));
-            return this.postToAppsScript(payload);
-          }
-          throw error;
-        }
-      }
-
-      readLS(key, fallback) {
-        try { 
-          const v = localStorage.getItem(key); 
-          return v == null ? fallback : v; 
-        } catch { 
-          return fallback; 
-        }
-      }
-
-      writeLS(key, val) {
-        try { 
-          localStorage.setItem(key, val); 
-        } catch (e) {
-          console.warn('Failed to write to localStorage:', e.message);
-        }
-      }
-
-      async onPageEnter() {
-        try {
-          let uid = this.readLS(this.LS_KEYS.uid, '');
-          const isNewUser = !uid;
-          
-          if (!uid) { 
-            uid = this.generateUid(); 
-            this.writeLS(this.LS_KEYS.uid, uid); 
-            this.writeLS(this.LS_KEYS.first, this.nowIso()); 
-            this.writeLS(this.LS_KEYS.visits, String(0)); 
-            this.writeLS(this.LS_KEYS.totalMin, String(0)); 
-          }
-
-          const visitCountLocal = Number(this.readLS(this.LS_KEYS.visits, '0')) + 1; 
-          this.writeLS(this.LS_KEYS.visits, String(visitCountLocal));
-
-          const tz = this.getTimezoneLabel();
-          const res = this.screenResolution();
-          const ip = await this.fetchIpProfile();
-
-          const entryTime = this.nowIso();
-
-          const payload = {
-            event: 'page_enter',
-            uid,
-            firstVisitIso: this.readLS(this.LS_KEYS.first, entryTime),
-            entryTime,
-            sectionName: CONFIG.SECTION_NAME,
-            deviceType: this.deviceType,
-            deviceModel: this.deviceModel,
-            userAgent: this.userAgent,
-            screenResolution: res,
-            timezone: tz,
-            ip: ip.ip || '',
-            country: ip.country || '',
-            city: ip.city || '',
-            location: ip.loc || '',
-            visitCountLocal,
-            sheetId: CONFIG.SHEET_ID,
-          };
-
-          await this.postToAppsScript(payload);
-          console.log('Analytics: Page enter tracked successfully');
-        } catch (error) {
-          console.error('Analytics: Failed to track page enter:', error.message);
-        }
-      }
-
-      async onPageExit(reason) {
-        if (this.sentExit) return; 
-        this.sentExit = true;
-        
-        try {
-          const exitTime = this.nowIso();
-          const durationSec = Math.max(0, Math.floor((Date.now() - this.sessionStartMs) / 1000));
-          
-          const payload = {
-            event: 'page_exit',
-            uid: this.readLS(this.LS_KEYS.uid, ''),
-            exitTime,
-            durationMinutes: this.secondsToMinutes(durationSec),
-            sectionName: CONFIG.SECTION_NAME,
-            sheetId: CONFIG.SHEET_ID,
-            reason
-          };
-          
-          await this.postToAppsScript(payload);
-          console.log('Analytics: Page exit tracked successfully');
-          
-          // Update local total minutes hint
-          const prev = Number(this.readLS(this.LS_KEYS.totalMin, '0'));
-          this.writeLS(this.LS_KEYS.totalMin, String(Math.round((prev + payload.durationMinutes) * 100) / 100));
-        } catch (error) {
-          console.error('Analytics: Failed to track page exit:', error.message);
-        }
-      }
-
-      goInternal() {
-        try { 
-          window.location.href = 'go:HM'; 
-        } catch (e) { 
-          console.error('Failed to navigate to internal section:', e.message);
-        }
-      }
-
-      startCountdown() {
-        const badge = document.getElementById('countdownBadge');
-        if (!badge) return;
-        
-        badge.textContent = String(this.countdownRemaining);
-        
-        const interval = setInterval(() => {
-          this.countdownRemaining -= 1;
-          badge.textContent = String(Math.max(0, this.countdownRemaining));
-          
-          if (this.countdownRemaining <= 0) {
-            clearInterval(interval);
-            this.goInternal();
-          }
-        }, 1000);
-      }
-
-      init() {
-        // Set up event listeners
-        document.addEventListener('visibilitychange', () => {
-          if (document.visibilityState === 'hidden') {
-            this.onPageExit('hidden');
-          }
-        });
-        
-        window.addEventListener('pagehide', () => this.onPageExit('pagehide'));
-        window.addEventListener('beforeunload', () => this.onPageExit('beforeunload'));
-
-        // Initialize UI
-        const continueBtn = document.getElementById('continueBtn');
-        if (continueBtn) {
-          continueBtn.addEventListener('click', () => this.goInternal());
-        }
-
-        // Start countdown and analytics
-        this.startCountdown();
-        this.onPageEnter();
+    function generateUid() {
+      // USR_ + 26 chars base36
+      try {
+        const buf = new Uint32Array(6);
+        crypto.getRandomValues(buf);
+        return 'USR_' + Array.from(buf).map(n => n.toString(36)).join('').slice(0, 26);
+      } catch (e) {
+        return 'USR_' + (Date.now().toString(36) + Math.random().toString(36).slice(2, 18)).toUpperCase();
       }
     }
 
-    // ---------- Initialize ----------
-    document.addEventListener('DOMContentLoaded', () => {
-      const tracker = new AnalyticsTracker();
-      tracker.init();
+    function getDeviceType(ua) {
+      const s = ua.toLowerCase();
+      if (/tablet|ipad|playbook|silk(?!.*mobile)/.test(s)) return 'Tablet';
+      if (/mobi|android|iphone|ipod|opera mini|iemobile/.test(s)) return 'Mobile';
+      return 'Desktop';
+    }
+
+    function parseDeviceModel(ua) {
+      // Best-effort model extraction from UA
+      const m = ua.match(/\(([^)]+)\)/);
+      if (!m) return '';
+      const inside = m[1];
+      // Common Android pattern: Linux; Android 13; MODEL
+      const parts = inside.split(';').map(x => x.trim());
+      if (parts.length >= 3) return parts[2];
+      return inside;
+    }
+
+    function nowIso() { return new Date().toISOString(); }
+
+    function secondsToMinutes(sec) { return Math.round((sec / 60) * 100) / 100; }
+
+    function screenResolution() {
+      return `${window.screen.width}x${window.screen.height}`;
+    }
+
+    async function fetchIpProfile() {
+      // Try multiple providers (no API key), with graceful fallback
+      const providers = [
+        () => fetch('https://ipapi.co/json/').then(r => r.ok ? r.json() : Promise.reject('ipapi.co failed')).then(j => ({
+          ip: j.ip || '', country: j.country_name || '', city: j.city || '',
+          loc: (j.latitude && j.longitude) ? `${j.latitude}, ${j.longitude}` : '',
+        })),
+        () => fetch('https://ipwho.is/').then(r => r.ok ? r.json() : Promise.reject('ipwho.is failed')).then(j => ({
+          ip: j.ip || '', country: j.country || '', city: j.city || '',
+          loc: (j.latitude && j.longitude) ? `${j.latitude}, ${j.longitude}` : '',
+        })),
+        () => fetch('https://api.ipify.org?format=json').then(r => r.ok ? r.json() : Promise.reject('ipify failed')).then(j => ({
+          ip: j.ip || '', country: '', city: '', loc: ''
+        })),
+      ];
+      for (const p of providers) {
+        try { const data = await p(); return data; } catch (e) { /* next */ }
+      }
+      return { ip: '', country: '', city: '', loc: '' };
+    }
+
+    function getTimezoneLabel() {
+      try { return Intl.DateTimeFormat().resolvedOptions().timeZone || '' } catch { return '' }
+    }
+
+    function postToAppsScript(payload) {
+      // Use x-www-form-urlencoded to avoid CORS preflight
+      const body = new URLSearchParams({ payload: JSON.stringify(payload) });
+      return fetch(APPS_SCRIPT_URL, { method: 'POST', body });
+    }
+
+    // ---------- Tracking State ----------
+    const LS_KEYS = {
+      uid: 'xplusbd_uid',
+      first: 'xplusbd_first_visit',
+      visits: 'xplusbd_visit_count',
+      totalMin: 'xplusbd_total_minutes',
+    };
+
+    const userAgent = navigator.userAgent || navigator.vendor || window.opera || '';
+    const deviceType = getDeviceType(userAgent);
+    const deviceModel = parseDeviceModel(userAgent) || (deviceType === 'Mobile' ? 'Android WebView' : 'WebView');
+
+    let sessionStartMs = Date.now();
+    let sentExit = false;
+    let countdownRemaining = 5;
+
+    function readLS(key, fallback) {
+      try { const v = localStorage.getItem(key); return v == null ? fallback : v; } catch { return fallback }
+    }
+    function writeLS(key, val) {
+      try { localStorage.setItem(key, val) } catch {}
+    }
+
+    async function onPageEnter() {
+      let uid = readLS(LS_KEYS.uid, '');
+      const isNewUser = !uid;
+      if (!uid) { uid = generateUid(); writeLS(LS_KEYS.uid, uid); writeLS(LS_KEYS.first, nowIso()); writeLS(LS_KEYS.visits, String(0)); writeLS(LS_KEYS.totalMin, String(0)); }
+
+      // Visits count (client hint; server will be source of truth)
+      const visitCountLocal = Number(readLS(LS_KEYS.visits, '0')) + 1; writeLS(LS_KEYS.visits, String(visitCountLocal));
+
+      const tz = getTimezoneLabel();
+      const res = screenResolution();
+      const ip = await fetchIpProfile();
+
+      const entryTime = nowIso();
+      const sectionName = 'HM'; // target internal section
+
+      const payload = {
+        event: 'page_enter',
+        uid,
+        firstVisitIso: readLS(LS_KEYS.first, entryTime),
+        entryTime,
+        sectionName,
+        deviceType,
+        deviceModel,
+        userAgent,
+        screenResolution: res,
+        timezone: tz,
+        ip: ip.ip || '',
+        country: ip.country || '',
+        city: ip.city || '',
+        location: ip.loc || '',
+        visitCountLocal,
+        sheetId: SHEET_ID,
+      };
+
+      try { 
+        const response = await postToAppsScript(payload);
+        console.log('Page enter tracking sent:', response.ok ? 'Success' : 'Failed');
+      } catch (e) { 
+        console.error('Page enter tracking failed:', e);
+      }
+    }
+
+    async function onPageExit(reason) {
+      if (sentExit) return; sentExit = true;
+      const exitTime = nowIso();
+      const durationSec = Math.max(0, Math.floor((Date.now() - sessionStartMs) / 1000));
+      const payload = {
+        event: 'page_exit',
+        uid: readLS(LS_KEYS.uid, ''),
+        exitTime,
+        durationMinutes: secondsToMinutes(durationSec),
+        sectionName: 'HM',
+        sheetId: SHEET_ID,
+        reason
+      };
+      try { 
+        const response = await postToAppsScript(payload);
+        console.log('Page exit tracking sent:', response.ok ? 'Success' : 'Failed');
+      } catch (e) { 
+        console.error('Page exit tracking failed:', e);
+      }
+      // Update local total minutes hint
+      const prev = Number(readLS(LS_KEYS.totalMin, '0'));
+      writeLS(LS_KEYS.totalMin, String(Math.round((prev + payload.durationMinutes) * 100) / 100));
+    }
+
+    // ---------- Warning overlay logic ----------
+    function goInternal() {
+      // Navigate to internal section
+      try { window.location.href = 'go:HM'; } catch (e) { /* ignored in browsers */ }
+    }
+
+    function startCountdown() {
+      const badge = document.getElementById('countdownBadge');
+      badge.textContent = String(countdownRemaining);
+      const t = setInterval(() => {
+        countdownRemaining -= 1;
+        badge.textContent = String(Math.max(0, countdownRemaining));
+        if (countdownRemaining <= 0) {
+          clearInterval(t);
+          goInternal();
+        }
+      }, 1000);
+    }
+
+    // ---------- Lifecycle ----------
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') onPageExit('hidden');
+    });
+    window.addEventListener('pagehide', () => onPageExit('pagehide'));
+    window.addEventListener('beforeunload', () => onPageExit('beforeunload'));
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      startCountdown();
+      document.getElementById('continueBtn').addEventListener('click', goInternal);
+      // Fire analytics in background
+      onPageEnter();
     }, { once: true });
   </script>
 </body>

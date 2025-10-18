@@ -9,10 +9,10 @@
 :root {
   --base-font-size: 16px;
   font-size: var(--base-font-size);
-  --bg: #070b18; --panel: #0d1328; --fg: #eaf0ff; --muted: #96a3c7;
-  --primary: #6c8cff; --ok: #1ec97f; --warn: #ffcc66; --err: #ff5a78; --live: #37b5ff;
-  --card: #0f1733; --border: rgba(255,255,255,0.08);
-  --radius: 0.875rem; --shadow: 0 0.625rem 1.875rem rgba(0,0,0,0.25);
+  --bg:#070b18; --panel:#0d1328; --fg:#eaf0ff; --muted:#96a3c7;
+  --primary:#6c8cff; --ok:#1ec97f; --warn:#ffcc66; --err:#ff5a78; --live:#37b5ff;
+  --card:#0f1733; --border:rgba(255,255,255,0.08);
+  --radius:0.875rem; --shadow:0 0.625rem 1.875rem rgba(0,0,0,0.25);
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   --gradient-primary: linear-gradient(135deg, #6c8cff 0%, #4f46e5 100%);
   --gradient-success: linear-gradient(135deg, #1ec97f 0%, #10b981 100%);
@@ -215,27 +215,22 @@ main {
 .kpi.newusers .bubble { background: var(--warn); }
 .kpi.lifetime .bubble { background: var(--err); }
 
-/* Filters Panel */
+/* Enhanced Filters Panel - 2 Column Layout */
 .filters {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 1.5rem;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: 1fr 1fr;
   gap: 1rem;
+  row-gap: 1.5rem;
 }
 
 @media (max-width: 768px) {
   .filters {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.75rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .filters {
     grid-template-columns: 1fr;
+    gap: 1rem;
   }
 }
 
@@ -290,6 +285,14 @@ main {
 .filter-group select:hover {
   background: rgba(0, 0, 0, 0.5);
   border-color: rgba(108, 140, 255, 0.3);
+}
+
+/* Apply Filters Button - Full Width */
+.filter-group.apply-btn {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
 }
 
 /* Analytics Charts Section */
@@ -707,14 +710,14 @@ input:focus {
     </div>
     
     <div class="kpi last72" title="Last 72 Hours Active">
-      <h3>🟢 Last 72h Active</h3>
+      <h3>🟠 Last 72h Active</h3>
       <div class="val" id="k_72h">0</div>
       <canvas class="spark" id="sp_72h"></canvas>
       <div class="bubble"></div>
     </div>
     
     <div class="kpi last24" title="Last 24 Hours Active">
-      <h3>🔵 Last 24h Active</h3>
+      <h3>🟤 Last 24h Active</h3>
       <div class="val" id="k_24h">0</div>
       <canvas class="spark" id="sp_24h"></canvas>
       <div class="bubble"></div>
@@ -742,7 +745,7 @@ input:focus {
     </div>
   </section>
 
-  <!-- Filters Panel -->
+  <!-- Enhanced Filters Panel - 2 Column Layout -->
   <section class="filters">
     <div class="filter-group">
       <label for="f_timeRange">🕓 Time Range</label>
@@ -792,6 +795,13 @@ input:focus {
     </div>
     
     <div class="filter-group">
+      <label for="f_timezone">🧭 Timezone</label>
+      <select id="f_timezone">
+        <option value="all">All Timezones</option>
+      </select>
+    </div>
+    
+    <div class="filter-group">
       <label for="f_dateFrom">📅 Date From</label>
       <input type="date" id="f_dateFrom">
     </div>
@@ -806,7 +816,7 @@ input:focus {
       <input type="text" id="f_search" placeholder="UID, IP, City...">
     </div>
     
-    <div class="filter-group" style="grid-column: 1 / -1; display: flex; justify-content: center; margin-top: 1rem;">
+    <div class="filter-group apply-btn">
       <button id="applyFiltersBtn" class="refresh-btn" style="padding: 0.75rem 2rem; font-size: 0.9rem;">
         <span>🔍</span>
         <span>Apply Filters</span>
@@ -883,8 +893,8 @@ input:focus {
   
   // Configuration
   const CONFIG = {
-    APPS_SCRIPT_JSON_URL: 'https://script.google.com/macros/s/AKfycbx9MhZOWF68TgH6XwwYazgBeueWLgJbkjAcHgB5ELYcJ5KCZ_OeXx0dmGTuoGq328w/exec?format=json',
-    CSV_URL: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSIOGb5RBMnQiQ-GiHtkOn5qQhGhQnUmCsVie-jSv6UhvMihSQv1JN03Tr1EtoTIfbLThkSgGzNdwqc/pub?output=csv',
+    APPS_SCRIPT_JSON_URL: 'https://script.google.com/macros/s/AKfycbzKhap5QrxOMtDageJim9zCQp3lZRLN0zXwrYYeBdZoOTI2Hq8z9nvSaEGZ5Nbt6dcP/exec?format=json',
+    CSV_URL: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTJa_TU2bEAlH5-0BJimMeYlKIRh_aujfRZnqaXaCbl9txyFfH0BJFH0vs3cdpVZrHG4fXB4loWZ4IN/pub?output=csv',
     MAX_ROWS: 1000,
     DEBOUNCE_DELAY: 300,
     CACHE_DURATION: 30000,
@@ -925,6 +935,7 @@ input:focus {
         country: document.getElementById('f_country').value,
         city: document.getElementById('f_city').value,
         ip: document.getElementById('f_ip').value,
+        timezone: document.getElementById('f_timezone').value,
         dateFrom: document.getElementById('f_dateFrom').value,
         dateTo: document.getElementById('f_dateTo').value,
         search: document.getElementById('f_search').value.toLowerCase()
@@ -981,6 +992,9 @@ input:focus {
       // IP filter
       if (filters.ip !== 'all' && user['IP Address'] !== filters.ip) return false;
 
+      // Timezone filter
+      if (filters.timezone !== 'all' && user.Timezone !== filters.timezone) return false;
+
       // Date range filters
       if (filters.dateFrom) {
         const userDate = new Date(user['First Visit DateTime']);
@@ -996,7 +1010,7 @@ input:focus {
 
       // Search filter
       if (filters.search) {
-        const searchText = `${user['Unique User ID']} ${user['IP Address']} ${user.City} ${user.Country}`.toLowerCase();
+        const searchText = `${user['Unique User ID']} ${user['IP Address']} ${user.City} ${user.Country} ${user.Timezone}`.toLowerCase();
         if (!searchText.includes(filters.search)) return false;
       }
 
@@ -1579,10 +1593,12 @@ input:focus {
     const countries = [...new Set(data.map(u => u.Country).filter(Boolean))].sort();
     const cities = [...new Set(data.map(u => u.City).filter(Boolean))].sort();
     const ips = [...new Set(data.map(u => u['IP Address']).filter(Boolean))].sort();
+    const timezones = [...new Set(data.map(u => u.Timezone).filter(Boolean))].sort();
     
     populateSelect('f_country', countries);
     populateSelect('f_city', cities);
     populateSelect('f_ip', ips);
+    populateSelect('f_timezone', timezones);
   }
   
   function populateSelect(selectId, options) {

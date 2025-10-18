@@ -6,14 +6,16 @@
  * - Enhanced with better error handling, logging, and performance optimizations
  * - Supports dynamic filter options and advanced analytics
  * - Includes Visit History tracking for Yesterday Active calculations
+ * - Fixed data writing issues and improved database recording configuration
  *
  * Deploy as Web App (Anyone with link).
  */
 
 const CONFIG = {
-  DEFAULT_SPREADSHEET_ID: '11trONTNEuQ4WfmzTynytufAsBhYzgCkCem3L5w2VUvo',
+  DEFAULT_SPREADSHEET_ID: '1HRIjf-x7lnxhqXbMzK0QONG0edbBMpIvI2kkfNWJTC4',
   SHEET_NAME: 'Users Dashboard',
   VISIT_HISTORY_SHEET: 'Visit_History',
+  ERROR_LOG_SHEET: 'Error Log',
   MAX_RETRIES: 3,
   LOCK_TIMEOUT: 15000,
   CACHE_DURATION: 300000, // 5 minutes
@@ -70,6 +72,14 @@ const VISIT_HISTORY_HEADERS = [
   'Action Type'
 ];
 
+// Error Log headers
+const ERROR_LOG_HEADERS = [
+  'Timestamp',
+  'Level',
+  'Message',
+  'Data'
+];
+
 // Cache for performance
 const cache = {
   sheetData: null,
@@ -123,10 +133,11 @@ class Logger {
  */
 function getOrCreateErrorLogSheet() {
   const ss = SpreadsheetApp.openById(CONFIG.DEFAULT_SPREADSHEET_ID);
-  let sheet = ss.getSheetByName('Error Log');
+  let sheet = ss.getSheetByName(CONFIG.ERROR_LOG_SHEET);
   if (!sheet) {
-    sheet = ss.insertSheet('Error Log');
-    sheet.getRange(1, 1, 1, 4).setValues([['Timestamp', 'Level', 'Message', 'Data']]);
+    sheet = ss.insertSheet(CONFIG.ERROR_LOG_SHEET);
+    sheet.getRange(1, 1, 1, ERROR_LOG_HEADERS.length).setValues([ERROR_LOG_HEADERS]);
+    Logger.info('Created Error Log sheet');
   }
   return sheet;
 }
@@ -413,12 +424,14 @@ class AnalyticsCalculator {
     const countries = [...new Set(data.map(u => u.Country).filter(Boolean))].sort();
     const cities = [...new Set(data.map(u => u.City).filter(Boolean))].sort();
     const ips = [...new Set(data.map(u => u['IP Address']).filter(Boolean))].sort();
+    const timezones = [...new Set(data.map(u => u.Timezone).filter(Boolean))].sort();
     const statuses = ['Active (≤30d)', 'Inactive (>30d)', 'New (≤15d)', 'Live (≤30min)'];
     
     return {
       countries,
       cities,
       ips,
+      timezones,
       statuses,
       timeRanges: ['All Time', 'Today', 'Yesterday', 'Last 7 Days', 'Last 15 Days', 'Last 30 Days', 'Last 3 Months', 'Last 6 Months', 'Last 1 Year']
     };
@@ -549,6 +562,7 @@ function doGet(e) {
           <li>Activeness comparison charts</li>
           <li>New users growth tracking</li>
           <li>Yesterday active users tracking</li>
+          <li>Visit history logging</li>
           <li>Mobile-responsive dashboard</li>
         </ul>
       </div>
@@ -826,7 +840,7 @@ function handlePageEnter(sheet, body) {
 
   const rowIndex = findRowByUID(sheet, uid);
   if (rowIndex === -1) {
-    // New user row
+    // New user row - append to end of sheet
     Logger.info('Creating new user', { uid });
     
     const row = new Array(HEADERS.length).fill('');
@@ -853,6 +867,7 @@ function handlePageEnter(sheet, body) {
     row[idx('Source (optional)')] = body.source || '';
     row[idx('Notes / Admin Tag')] = '';
 
+    // Append row to end of sheet
     sheet.appendRow(row);
     
     // Log visit history for new user
@@ -934,6 +949,8 @@ function handlePageExit(sheet, body) {
     row[idx('Total Visit Count')] = 1;
     row[idx('App Entry Time')] = '';
     row[idx('App Exit Time')] = new Date(exitIso);
+    
+    // Append row to end of sheet
     sheet.appendRow(row);
     
     Logger.info('User created on exit', { uid });
@@ -971,8 +988,8 @@ function readAllRowsAsObjects(sheet, opts = {}) {
     }
     
     const lastCol = HEADERS.length;
-    const startRow = 2;
-    const numRows = lastRow - 1;
+    const startRow = 2; // Start from row 2 (after header)
+    const numRows = lastRow - 1; // Exclude header row
     
     Logger.debug('Reading data', { 
       totalRows: numRows, 
@@ -1047,7 +1064,7 @@ function findRowByUID(sheet, uid) {
     if (lastRow < 2) return -1;
     
     const uidCol = COL['Unique User ID'];
-    const range = sheet.getRange(2, uidCol, lastRow - 1, 1);
+    const range = sheet.getRange(2, uidCol, lastRow - 1, 1); // Start from row 2
     const vals = range.getValues();
     
     for (let i = 0; i < vals.length; i++) {
