@@ -1,12 +1,13 @@
 /**
  * Enhanced Users Analytics Tracker + JSON API for "Users Dashboard" sheet
- * - Handles POST events: page_enter, page_exit
+ * - Handles POST events: page_enter, page_exit with proper data writing
  * - Exposes GET ?format=json for dashboard with enhanced filtering
  * - Auto-creates sheet/header and sets ArrayFormulas for derived columns
  * - Enhanced with better error handling, logging, and performance optimizations
  * - Supports dynamic filter options and advanced analytics
  * - Includes Visit History tracking for Yesterday Active calculations
  * - Fixed data writing issues and improved database recording configuration
+ * - Top-down unlimited row recording system
  *
  * Deploy as Web App (Anyone with link).
  */
