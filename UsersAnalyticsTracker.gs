@@ -8,6 +8,7 @@
  * - Includes Visit History tracking for Yesterday Active calculations
  * - Fixed data writing issues and improved database recording configuration
  * - Top-down unlimited row recording system
+ * - Updated KPI calculations for specific column data
  *
  * Deploy as Web App (Anyone with link).
  */
@@ -338,7 +339,7 @@ class DataProcessor {
 }
 
 /**
- * Analytics calculator for dashboard metrics
+ * Analytics calculator for dashboard metrics with specific column calculations
  */
 class AnalyticsCalculator {
   static calculateKPIs(data) {
@@ -373,6 +374,12 @@ class AnalyticsCalculator {
         const lastVisit = new Date(u['Last Visit DateTime']);
         const minutesDiff = (now - lastVisit) / (1000 * 60);
         return minutesDiff <= 30 && minutesDiff >= 0;
+      }).length,
+      // Last 3 Days Active - Last Visit DateTime within last 3 days
+      last3d: data.filter(u => {
+        const lastVisit = new Date(u['Last Visit DateTime']);
+        const daysDiff = (now - lastVisit) / (1000 * 60 * 60 * 24);
+        return daysDiff <= 3 && daysDiff >= 0;
       }).length,
       // Last 72h Active - Last Visit DateTime within last 72 hours
       last72h: data.filter(u => {
@@ -464,6 +471,7 @@ class AnalyticsCalculator {
     const daysMap = {
       'today': 1,
       'yesterday': 2,
+      '3d': 3,
       '7d': 7,
       '15d': 15,
       '30d': 30,
@@ -1168,7 +1176,7 @@ function getAnalyticsData() {
     const kpis = AnalyticsCalculator.calculateKPIs(data);
     const filterOptions = AnalyticsCalculator.getFilterOptions(data);
     
-    const periods = ['today', 'yesterday', '7d', '15d', '30d', '3m', '6m', '1y'];
+    const periods = ['today', 'yesterday', '3d', '7d', '15d', '30d', '3m', '6m', '1y'];
     const activenessData = periods.map(period => ({
       period,
       count: AnalyticsCalculator.getActivenessData(data, period)

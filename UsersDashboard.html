@@ -211,11 +211,12 @@ main {
 .kpi.last72 .bubble { background: var(--live); }
 .kpi.last24 .bubble { background: var(--primary); }
 .kpi.last12 .bubble { background: var(--ok); }
+.kpi.last3d .bubble { background: var(--warn); }
 .kpi.yesterday .bubble { background: var(--warn); }
 .kpi.newusers .bubble { background: var(--warn); }
 .kpi.lifetime .bubble { background: var(--err); }
 
-/* Enhanced Filters Panel - 2 Column Layout */
+/* Enhanced Filters Panel - 2 Column Layout with Max Width */
 .filters {
   background: var(--card);
   border: 1px solid var(--border);
@@ -225,6 +226,7 @@ main {
   grid-template-columns: 1fr 1fr;
   gap: 1rem;
   row-gap: 1.5rem;
+  max-width: 100%;
 }
 
 @media (max-width: 768px) {
@@ -238,6 +240,7 @@ main {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  max-width: 2.5cm;
 }
 
 .filter-group label {
@@ -260,6 +263,7 @@ main {
   transition: var(--transition);
   outline: none;
   backdrop-filter: blur(10px);
+  max-width: 100%;
 }
 
 .filter-group select {
@@ -293,6 +297,7 @@ main {
   display: flex;
   justify-content: center;
   margin-top: 1rem;
+  max-width: none;
 }
 
 /* Analytics Charts Section */
@@ -709,6 +714,13 @@ input:focus {
       <div class="bubble"></div>
     </div>
     
+    <div class="kpi last3d" title="Last 3 Days Active">
+      <h3>🟡 Last 3 Days Active</h3>
+      <div class="val" id="k_3d">0</div>
+      <canvas class="spark" id="sp_3d"></canvas>
+      <div class="bubble"></div>
+    </div>
+    
     <div class="kpi last72" title="Last 72 Hours Active">
       <h3>🟠 Last 72h Active</h3>
       <div class="val" id="k_72h">0</div>
@@ -1077,6 +1089,12 @@ input:focus {
           const minutesDiff = (now - lastVisit) / (1000 * 60);
           return minutesDiff <= 30 && minutesDiff >= 0;
         }).length,
+        // Last 3 Days Active - Last Visit DateTime within last 3 days
+        last3d: this.rawData.filter(u => {
+          const lastVisit = new Date(u['Last Visit DateTime']);
+          const daysDiff = (now - lastVisit) / (1000 * 60 * 60 * 24);
+          return daysDiff <= 3 && daysDiff >= 0;
+        }).length,
         // Last 72h Active - Last Visit DateTime within last 72 hours
         last72h: this.rawData.filter(u => {
           const lastVisit = new Date(u['Last Visit DateTime']);
@@ -1136,6 +1154,8 @@ input:focus {
       const lastVisit = user['Last Visit DateTime'] ? new Date(user['Last Visit DateTime']).toLocaleDateString() : 'Never';
       const firstVisit = user['First Visit DateTime'] ? new Date(user['First Visit DateTime']).toLocaleDateString() : 'Unknown';
       const accountAge = user['Account Age (Days)'] || '0';
+      const timezone = user.Timezone || 'Unknown';
+      const deviceModel = user['Device Model / Name'] || 'Unknown';
       
       return `
         <div class="user-card">
@@ -1156,7 +1176,7 @@ input:focus {
               <span class="value">${lastVisit}</span>
             </div>
             <div class="user-detail">
-              <span class="label">Account Age:</span>
+              <span class="label">A/C Age:</span>
               <span class="value">${accountAge} days</span>
             </div>
             <div class="user-detail">
@@ -1166,6 +1186,14 @@ input:focus {
             <div class="user-detail">
               <span class="label">Location:</span>
               <span class="value">${user.City || 'Unknown'}, ${user.Country || 'Unknown'}</span>
+            </div>
+            <div class="user-detail">
+              <span class="label">Timezone:</span>
+              <span class="value">${timezone}</span>
+            </div>
+            <div class="user-detail">
+              <span class="label">Device Model:</span>
+              <span class="value">${deviceModel}</span>
             </div>
             <div class="user-detail">
               <span class="label">Total Visits:</span>
@@ -1469,9 +1497,9 @@ input:focus {
     }
 
     formatNumber(num) {
-      if (num >= 1000000000) return (num / 1000000000).toFixed(1).replace(/\.0$/, '') + 'b';
-      if (num >= 1000000) return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'm';
-      if (num >= 1000) return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+      if (num >= 1000000000) return (num / 1000000000).toFixed(1).replace(/\.0$/, '') + 'B';
+      if (num >= 1000000) return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+      if (num >= 1000) return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
       return num.toString();
     }
   }
