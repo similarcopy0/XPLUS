@@ -1,0 +1,1720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Users Dashboard - Real-time Analytics & Management</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root {
+  --base-font-size: 16px;
+  font-size: var(--base-font-size);
+  --bg:#070b18; --panel:#0d1328; --fg:#eaf0ff; --muted:#96a3c7;
+  --primary:#6c8cff; --ok:#1ec97f; --warn:#ffcc66; --err:#ff5a78; --live:#37b5ff;
+  --card:#0f1733; --border:rgba(255,255,255,0.08);
+  --radius:0.875rem; --shadow:0 0.625rem 1.875rem rgba(0,0,0,0.25);
+  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --gradient-primary: linear-gradient(135deg, #6c8cff 0%, #4f46e5 100%);
+  --gradient-success: linear-gradient(135deg, #1ec97f 0%, #10b981 100%);
+  --gradient-warning: linear-gradient(135deg, #ffcc66 0%, #f59e0b 100%);
+  --gradient-danger: linear-gradient(135deg, #ff5a78 0%, #ef4444 100%);
+}
+
+@media (max-width: 1100px) { :root { font-size: 15px; } }
+@media (max-width: 600px) { :root { font-size: 14px; } }
+@media (max-width: 420px) { :root { font-size: 13.5px; } }
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: linear-gradient(180deg, #070b18, #0a1021);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial;
+  line-height: 1.4;
+  min-height: 100vh;
+}
+
+/* Header Styles */
+header {
+  padding: 1rem 1.25rem;
+  position: sticky;
+  top: 0;
+  background: rgba(7, 11, 24, 0.9);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  z-index: 100;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.title h1 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.subtitle {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin-top: 0.25rem;
+}
+
+.header-controls {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.85rem;
+  transition: var(--transition);
+}
+
+.tag:hover {
+  background: rgba(255, 255, 255, 0.05);
+  transform: translateY(-1px);
+}
+
+.refresh-btn {
+  background: var(--gradient-primary);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.refresh-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(108, 140, 255, 0.3);
+}
+
+.refresh-btn:active {
+  transform: translateY(0);
+}
+
+.refresh-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Main Layout */
+main {
+  padding: 1rem;
+  max-width: 87.5rem;
+  margin: 0 auto;
+  display: grid;
+  gap: 1.5rem;
+}
+
+/* KPI Grid */
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+@media (max-width: 1200px) { .kpis { grid-template-columns: repeat(4, 1fr); } }
+@media (max-width: 900px) { .kpis { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 600px) { .kpis { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 380px) { .kpis { grid-template-columns: 1fr; } }
+
+.kpi {
+  background: linear-gradient(180deg, #0d1328, #0b1122);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  position: relative;
+  overflow: hidden;
+  transition: var(--transition);
+  cursor: pointer;
+}
+
+.kpi:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+  border-color: rgba(108, 140, 255, 0.3);
+}
+
+.kpi h3 {
+  font-size: 0.9rem;
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.kpi .val {
+  font-size: 2.2rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  margin-bottom: 0.5rem;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.kpi .spark {
+  position: absolute;
+  right: 1rem;
+  bottom: 1rem;
+  width: 80px;
+  height: 30px;
+  opacity: 0.7;
+}
+
+.kpi .bubble {
+  position: absolute;
+  inset: auto -30px -40px auto;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  filter: blur(20px);
+  opacity: 0.15;
+  transition: var(--transition);
+}
+
+.kpi:hover .bubble {
+  opacity: 0.25;
+  transform: scale(1.1);
+}
+
+.kpi.total .bubble { background: var(--primary); }
+.kpi.active .bubble { background: var(--ok); }
+.kpi.inactive .bubble { background: var(--err); }
+.kpi.today .bubble { background: var(--ok); }
+.kpi.live .bubble { background: var(--live); }
+.kpi.last72 .bubble { background: var(--live); }
+.kpi.last24 .bubble { background: var(--primary); }
+.kpi.last12 .bubble { background: var(--ok); }
+.kpi.last3d .bubble { background: var(--warn); }
+.kpi.yesterday .bubble { background: var(--warn); }
+.kpi.newusers .bubble { background: var(--warn); }
+.kpi.lifetime .bubble { background: var(--err); }
+
+/* Enhanced Filters Panel - 2 Column Layout with Max Width */
+.filters {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  row-gap: 1.5rem;
+  max-width: 100%;
+}
+
+@media (max-width: 768px) {
+  .filters {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 2.5cm;
+}
+
+.filter-group label {
+  font-size: 0.85rem;
+  color: var(--muted);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.filter-group select,
+.filter-group input {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  color: var(--fg);
+  padding: 0.75rem;
+  font-size: 0.9rem;
+  transition: var(--transition);
+  outline: none;
+  backdrop-filter: blur(10px);
+  max-width: 100%;
+}
+
+.filter-group select {
+  background: rgba(0, 0, 0, 0.4);
+  color: #ffffff;
+  font-weight: 500;
+}
+
+.filter-group select option {
+  background: rgba(15, 23, 51, 0.95);
+  color: #eaf0ff;
+  padding: 0.5rem;
+  border: none;
+}
+
+.filter-group select:focus,
+.filter-group input:focus {
+  border-color: var(--primary);
+  background: rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 0 3px rgba(108, 140, 255, 0.1);
+}
+
+.filter-group select:hover {
+  background: rgba(0, 0, 0, 0.5);
+  border-color: rgba(108, 140, 255, 0.3);
+}
+
+/* Apply Filters Button - Full Width */
+.filter-group.apply-btn {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+  max-width: none;
+}
+
+/* Analytics Charts Section */
+.analytics-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+@media (max-width: 1000px) {
+  .analytics-section {
+    grid-template-columns: 1fr;
+  }
+}
+
+.chart-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.chart-card h3 {
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+  color: var(--fg);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.chart-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.chart-toggle {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.5rem 1rem;
+  color: var(--muted);
+  cursor: pointer;
+  transition: var(--transition);
+  font-size: 0.8rem;
+  font-weight: 500;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chart-toggle.active {
+  background: var(--gradient-primary);
+  color: white;
+  border-color: transparent;
+}
+
+.chart-toggle:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--fg);
+}
+
+.chart-type-toggle {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.chart-type-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+  color: var(--muted);
+  cursor: pointer;
+  transition: var(--transition);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.chart-type-btn.active {
+  background: var(--gradient-primary);
+  color: white;
+  border-color: transparent;
+}
+
+.chart-container {
+  height: 300px;
+  width: 100%;
+  position: relative;
+}
+
+@media (max-width: 600px) {
+  .chart-container {
+    height: 250px;
+  }
+}
+
+.chart-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.last-updated {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+/* Users List Section */
+.users-section {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  margin-top: 1rem;
+}
+
+.users-section h3 {
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+  color: var(--fg);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.users-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+@media (max-width: 768px) {
+  .users-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.user-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  transition: var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+
+.user-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(108, 140, 255, 0.3);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+.user-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--gradient-primary);
+  opacity: 0;
+  transition: var(--transition);
+}
+
+.user-card:hover::before {
+  opacity: 1;
+}
+
+.user-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.user-id {
+  font-weight: 700;
+  color: var(--fg);
+  font-size: 0.9rem;
+}
+
+.user-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.user-status.active { color: var(--ok); }
+.user-status.inactive { color: var(--err); }
+.user-status.new { color: var(--warn); }
+.user-status.live { color: var(--live); }
+
+.user-details {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.user-detail {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+.user-detail .label {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.user-detail .value {
+  color: var(--fg);
+  font-weight: 600;
+}
+
+/* Loading States */
+.loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.loading-spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: var(--primary);
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Utility Classes */
+.muted { color: var(--muted); }
+.text-center { text-align: center; }
+.hidden { display: none; }
+
+/* Number formatting animation */
+.number-animate {
+  transition: all 0.3s ease;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .kpi .val {
+    font-size: 1.8rem;
+  }
+  
+  .user-card {
+    padding: 0.75rem;
+  }
+  
+  .filters {
+    padding: 1rem;
+  }
+  
+  .chart-card {
+    padding: 1rem;
+  }
+  
+  .chart-controls {
+    gap: 0.25rem;
+  }
+  
+  .chart-toggle {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.75rem;
+    min-height: 32px;
+  }
+}
+
+/* Dark mode enhancements */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0a0a0a;
+    --panel: #111111;
+    --fg: #ffffff;
+    --muted: #888888;
+  }
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Focus styles for accessibility */
+button:focus,
+select:focus,
+input:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Status indicators */
+.status-indicator {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 0.5rem;
+}
+
+.status-indicator.live {
+  background: var(--live);
+  animation: pulse 2s infinite;
+}
+
+.status-indicator.active { background: var(--ok); }
+.status-indicator.inactive { background: var(--err); }
+.status-indicator.new { background: var(--warn); }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Skeleton loading animation */
+.skeleton {
+  background: linear-gradient(90deg, rgba(255,255,255,0.1) 25%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.1) 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="title">
+    <div>
+      <h1>📊 Users Dashboard</h1>
+      <p class="subtitle">Real-time Analytics & User Management System</p>
+    </div>
+    <div class="header-controls">
+      <div class="tag" title="Google Sheet Source">
+        <span>🗂️</span> Sheet: Users Dashboard
+      </div>
+      <button id="refreshBtn" class="refresh-btn" title="Refresh Data">
+        <span id="refreshIcon">🔄</span>
+        <span id="refreshText">Refresh</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- KPI Summary Panel -->
+  <section class="kpis">
+    <div class="kpi total" title="Total Users Count">
+      <h3>👥 Total Users</h3>
+      <div class="val" id="k_total">0</div>
+      <canvas class="spark" id="sp_total"></canvas>
+      <div class="bubble"></div>
+    </div>
+    
+    <div class="kpi active" title="Active Users (≤30 days)">
+      <h3>🟣 Active (≤30d)</h3>
+      <div class="val" id="k_active">0</div>
+      <canvas class="spark" id="sp_active"></canvas>
+      <div class="bubble"></div>
+    </div>
+    
+    <div class="kpi inactive" title="Inactive Users (>30 days)">
+      <h3>🔴 Inactive (>30d)</h3>
+      <div class="val" id="k_inactive">0</div>
+      <canvas class="spark" id="sp_inactive"></canvas>
+      <div class="bubble"></div>
+    </div>
+    
+    <div class="kpi today" title="Today's Active Users">
+      <h3>📅 Today's Active</h3>
+      <div class="val" id="k_today">0</div>
+      <canvas class="spark" id="sp_today"></canvas>
+      <div class="bubble"></div>
+    </div>
+    
+    <div class="kpi yesterday" title="Yesterday's Active Users">
+      <h3>📅 Yesterday Active</h3>
+      <div class="val" id="k_yesterday">0</div>
+      <canvas class="spark" id="sp_yesterday"></canvas>
+      <div class="bubble"></div>
+    </div>
+    
+    <div class="kpi live" title="Currently Online Users">
+      <h3>🟢 Current Live</h3>
+      <div class="val" id="k_live">0</div>
+      <canvas class="spark" id="sp_live"></canvas>
+      <div class="bubble"></div>
+    </div>
+    
+    <div class="kpi last3d" title="Last 3 Days Active">
+      <h3>🟡 Last 3 Days Active</h3>
+      <div class="val" id="k_3d">0</div>
+      <canvas class="spark" id="sp_3d"></canvas>
+      <div class="bubble"></div>
+    </div>
+    
+    <div class="kpi last72" title="Last 72 Hours Active">
+      <h3>🟠 Last 72h Active</h3>
+      <div class="val" id="k_72h">0</div>
+      <canvas class="spark" id="sp_72h"></canvas>
+      <div class="bubble"></div>
+    </div>
+    
+    <div class="kpi last24" title="Last 24 Hours Active">
+      <h3>🟤 Last 24h Active</h3>
+      <div class="val" id="k_24h">0</div>
+      <canvas class="spark" id="sp_24h"></canvas>
+      <div class="bubble"></div>
+    </div>
+    
+    <div class="kpi last12" title="Last 12 Hours Active">
+      <h3>🟢 Last 12h Active</h3>
+      <div class="val" id="k_12h">0</div>
+      <canvas class="spark" id="sp_12h"></canvas>
+      <div class="bubble"></div>
+    </div>
+    
+    <div class="kpi newusers" title="New Users (≤15 days)">
+      <h3>🆕 New Users (≤15d)</h3>
+      <div class="val" id="k_new">0</div>
+      <canvas class="spark" id="sp_new"></canvas>
+      <div class="bubble"></div>
+    </div>
+    
+    <div class="kpi lifetime" title="Lifetime Total Visits">
+      <h3>📈 Lifetime Visits</h3>
+      <div class="val" id="k_visits">0</div>
+      <canvas class="spark" id="sp_visits"></canvas>
+      <div class="bubble"></div>
+    </div>
+  </section>
+
+  <!-- Enhanced Filters Panel - 2 Column Layout -->
+  <section class="filters">
+    <div class="filter-group">
+      <label for="f_timeRange">🕓 Time Range</label>
+      <select id="f_timeRange">
+        <option value="all">All Time</option>
+        <option value="today">Today</option>
+        <option value="yesterday">Yesterday</option>
+        <option value="7d">Last 7 Days</option>
+        <option value="15d">Last 15 Days</option>
+        <option value="30d">Last 30 Days</option>
+        <option value="3m">Last 3 Months</option>
+        <option value="6m">Last 6 Months</option>
+        <option value="1y">Last 1 Year</option>
+      </select>
+    </div>
+    
+    <div class="filter-group">
+      <label for="f_status">⚙️ Status</label>
+      <select id="f_status">
+        <option value="all">All Status</option>
+        <option value="active">Active (≤30d)</option>
+        <option value="inactive">Inactive (>30d)</option>
+        <option value="new">New (≤15d)</option>
+        <option value="live">Live (≤30min)</option>
+      </select>
+    </div>
+    
+    <div class="filter-group">
+      <label for="f_country">🌍 Country</label>
+      <select id="f_country">
+        <option value="all">All Countries</option>
+      </select>
+    </div>
+    
+    <div class="filter-group">
+      <label for="f_city">🏙️ City</label>
+      <select id="f_city">
+        <option value="all">All Cities</option>
+      </select>
+    </div>
+    
+    <div class="filter-group">
+      <label for="f_ip">🔢 IP Address</label>
+      <select id="f_ip">
+        <option value="all">All IPs</option>
+      </select>
+    </div>
+    
+    <div class="filter-group">
+      <label for="f_timezone">🧭 Timezone</label>
+      <select id="f_timezone">
+        <option value="all">All Timezones</option>
+      </select>
+    </div>
+    
+    <div class="filter-group">
+      <label for="f_dateFrom">📅 Date From</label>
+      <input type="date" id="f_dateFrom">
+    </div>
+    
+    <div class="filter-group">
+      <label for="f_dateTo">📅 Date To</label>
+      <input type="date" id="f_dateTo">
+    </div>
+    
+    <div class="filter-group">
+      <label for="f_search">🔍 Search</label>
+      <input type="text" id="f_search" placeholder="UID, IP, City...">
+    </div>
+    
+    <div class="filter-group apply-btn">
+      <button id="applyFiltersBtn" class="refresh-btn" style="padding: 0.75rem 2rem; font-size: 0.9rem;">
+        <span>🔍</span>
+        <span>Apply Filters</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- Analytics Charts Section -->
+  <section class="analytics-section">
+    <div class="chart-card">
+      <h3>📊 User Activeness Comparison</h3>
+      <div class="chart-type-toggle">
+        <button class="chart-type-btn active" data-type="bar">📊 Bar Chart</button>
+        <button class="chart-type-btn" data-type="line">📈 Line Chart</button>
+      </div>
+      <div class="chart-controls">
+        <button class="chart-toggle active" data-period="today">Today</button>
+        <button class="chart-toggle" data-period="yesterday">Yesterday</button>
+        <button class="chart-toggle" data-period="3d">Last 3 Days</button>
+        <button class="chart-toggle" data-period="7d">Last 7 Days</button>
+        <button class="chart-toggle" data-period="15d">Last 15 Days</button>
+        <button class="chart-toggle" data-period="30d">Last 30 Days</button>
+        <button class="chart-toggle" data-period="3m">Last 3 Months</button>
+        <button class="chart-toggle" data-period="6m">Last 6 Months</button>
+        <button class="chart-toggle" data-period="1y">Last 1 Year</button>
+      </div>
+      <div class="chart-container">
+        <canvas id="activenessChart"></canvas>
+        <div class="chart-loading hidden" id="activenessLoading">Loading chart data...</div>
+      </div>
+      <div class="last-updated" id="activenessLastUpdated">Last updated: Never</div>
+    </div>
+    
+    <div class="chart-card">
+      <h3>📈 New Users Growth</h3>
+      <div class="chart-type-toggle">
+        <button class="chart-type-btn active" data-type="bar">📊 Bar Chart</button>
+        <button class="chart-type-btn" data-type="line">📈 Line Chart</button>
+      </div>
+      <div class="chart-controls">
+        <button class="chart-toggle active" data-period="today">Today</button>
+        <button class="chart-toggle" data-period="yesterday">Yesterday</button>
+        <button class="chart-toggle" data-period="3d">Last 3 Days</button>
+        <button class="chart-toggle" data-period="7d">Last 7 Days</button>
+        <button class="chart-toggle" data-period="15d">Last 15 Days</button>
+        <button class="chart-toggle" data-period="30d">Last 30 Days</button>
+        <button class="chart-toggle" data-period="3m">Last 3 Months</button>
+        <button class="chart-toggle" data-period="6m">Last 6 Months</button>
+        <button class="chart-toggle" data-period="1y">Last 1 Year</button>
+      </div>
+      <div class="chart-container">
+        <canvas id="growthChart"></canvas>
+        <div class="chart-loading hidden" id="growthLoading">Loading chart data...</div>
+      </div>
+      <div class="last-updated" id="growthLastUpdated">Last updated: Never</div>
+    </div>
+  </section>
+
+  <!-- Users List Section -->
+  <section class="users-section">
+    <h3>👥 Users List</h3>
+    <div class="users-grid" id="usersGrid">
+      <!-- Users will be dynamically loaded here -->
+    </div>
+    <div class="text-center muted" id="usersNote" style="margin-top: 1rem;">
+      Loading users...
+    </div>
+  </section>
+</main>
+
+<script>
+(function() {
+  'use strict';
+  
+  // Configuration
+  const CONFIG = {
+    APPS_SCRIPT_JSON_URL: 'https://script.google.com/macros/s/AKfycbzKhap5QrxOMpDageJim9zCQp3lZRLN0zXwrYYeBdZoOTI2Hq8z9nvSaEGZ5Nbt6dcP/exec?format=json',
+    CSV_URL: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTJa_TU2bEAlH5-0BJimMeYlKIRh_aujfRZnqaXaCbl9txyFfH0BJFH0vs3cdpVZrHG4fXB4loWZ4IN/pub?output=csv',
+    MAX_ROWS: 1000,
+    DEBOUNCE_DELAY: 300,
+    CACHE_DURATION: 30000,
+    REFRESH_INTERVAL: 300000 // 5 minutes
+  };
+
+  // Chart instances
+  let activenessChart = null;
+  let growthChart = null;
+
+  // State management
+  class DashboardState {
+    constructor() {
+      this.rawData = [];
+      this.filteredData = [];
+      this.isLoading = false;
+      this.lastUpdate = 0;
+      this.visitHistory = [];
+    }
+
+    setData(data) {
+      this.rawData = data;
+      this.lastUpdate = Date.now();
+      this.applyFilters();
+      this.updateCharts();
+    }
+
+    applyFilters() {
+      const filters = this.getActiveFilters();
+      this.filteredData = this.rawData.filter(user => this.matchesFilters(user, filters));
+      this.updateUI();
+    }
+
+    getActiveFilters() {
+      return {
+        timeRange: document.getElementById('f_timeRange').value,
+        status: document.getElementById('f_status').value,
+        country: document.getElementById('f_country').value,
+        city: document.getElementById('f_city').value,
+        ip: document.getElementById('f_ip').value,
+        timezone: document.getElementById('f_timezone').value,
+        dateFrom: document.getElementById('f_dateFrom').value,
+        dateTo: document.getElementById('f_dateTo').value,
+        search: document.getElementById('f_search').value.toLowerCase()
+      };
+    }
+
+    matchesFilters(user, filters) {
+      // Time range filter
+      if (filters.timeRange !== 'all') {
+        const userDate = new Date(user['Last Visit DateTime'] || user['First Visit DateTime']);
+        const now = new Date();
+        const daysDiff = (now - userDate) / (1000 * 60 * 60 * 24);
+        
+        switch (filters.timeRange) {
+          case 'today':
+            if (daysDiff > 1) return false;
+            break;
+          case 'yesterday':
+            if (daysDiff < 1 || daysDiff > 2) return false;
+            break;
+          case '7d':
+            if (daysDiff > 7) return false;
+            break;
+          case '15d':
+            if (daysDiff > 15) return false;
+            break;
+          case '30d':
+            if (daysDiff > 30) return false;
+            break;
+          case '3m':
+            if (daysDiff > 90) return false;
+            break;
+          case '6m':
+            if (daysDiff > 180) return false;
+            break;
+          case '1y':
+            if (daysDiff > 365) return false;
+            break;
+        }
+      }
+
+      // Status filter
+      if (filters.status !== 'all') {
+        const userStatus = this.getUserStatus(user);
+        if (userStatus !== filters.status) return false;
+      }
+
+      // Country filter
+      if (filters.country !== 'all' && user.Country !== filters.country) return false;
+
+      // City filter
+      if (filters.city !== 'all' && user.City !== filters.city) return false;
+
+      // IP filter
+      if (filters.ip !== 'all' && user['IP Address'] !== filters.ip) return false;
+
+      // Timezone filter
+      if (filters.timezone !== 'all' && user.Timezone !== filters.timezone) return false;
+
+      // Date range filters
+      if (filters.dateFrom) {
+        const userDate = new Date(user['First Visit DateTime']);
+        const fromDate = new Date(filters.dateFrom);
+        if (userDate < fromDate) return false;
+      }
+
+      if (filters.dateTo) {
+        const userDate = new Date(user['First Visit DateTime']);
+        const toDate = new Date(filters.dateTo);
+        if (userDate > toDate) return false;
+      }
+
+      // Search filter
+      if (filters.search) {
+        const searchText = `${user['Unique User ID']} ${user['IP Address']} ${user.City} ${user.Country} ${user.Timezone}`.toLowerCase();
+        if (!searchText.includes(filters.search)) return false;
+      }
+
+      return true;
+    }
+
+    getUserStatus(user) {
+      const lastVisit = new Date(user['Last Visit DateTime']);
+      const firstVisit = new Date(user['First Visit DateTime']);
+      const now = new Date();
+      
+      const daysSinceLastVisit = (now - lastVisit) / (1000 * 60 * 60 * 24);
+      const accountAge = (now - firstVisit) / (1000 * 60 * 60 * 24);
+      const minutesSinceLastVisit = (now - lastVisit) / (1000 * 60);
+      
+      // Current Live - within last 30 minutes
+      if (minutesSinceLastVisit <= 30 && minutesSinceLastVisit >= 0) return 'live';
+      // New Users - First Visit within last 15 days
+      if (accountAge <= 15 && accountAge >= 0) return 'new';
+      // Active - Last Visit within last 30 days
+      if (daysSinceLastVisit <= 30 && daysSinceLastVisit >= 0) return 'active';
+      // Inactive - Last Visit over 30 days ago
+      return 'inactive';
+    }
+
+    updateUI() {
+      this.updateKPIs();
+      this.updateUsersList();
+    }
+
+    updateKPIs() {
+      const now = new Date();
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const yesterdayStart = new Date(todayStart.getTime() - 24 * 60 * 60 * 1000);
+      const yesterdayEnd = new Date(todayStart.getTime() - 1);
+      
+      const kpis = {
+        total: this.rawData.length,
+        // Active (≤30d) - Last Visit DateTime within last 30 days
+        active: this.rawData.filter(u => {
+          const lastVisit = new Date(u['Last Visit DateTime']);
+          const daysDiff = (now - lastVisit) / (1000 * 60 * 60 * 24);
+          return daysDiff <= 30 && daysDiff >= 0;
+        }).length,
+        // Inactive (>30d) - Last Visit DateTime over 30 days ago
+        inactive: this.rawData.filter(u => {
+          const lastVisit = new Date(u['Last Visit DateTime']);
+          const daysDiff = (now - lastVisit) / (1000 * 60 * 60 * 24);
+          return daysDiff > 30;
+        }).length,
+        // Today's Active - Last Visit DateTime today
+        today: this.rawData.filter(u => {
+          const lastVisit = new Date(u['Last Visit DateTime']);
+          return lastVisit >= todayStart;
+        }).length,
+        // Yesterday's Active - Last Visit DateTime yesterday
+        yesterday: this.rawData.filter(u => {
+          const lastVisit = new Date(u['Last Visit DateTime']);
+          return lastVisit >= yesterdayStart && lastVisit <= yesterdayEnd;
+        }).length,
+        // Current Live - Last Visit DateTime within last 30 minutes
+        live: this.rawData.filter(u => {
+          const lastVisit = new Date(u['Last Visit DateTime']);
+          const minutesDiff = (now - lastVisit) / (1000 * 60);
+          return minutesDiff <= 30 && minutesDiff >= 0;
+        }).length,
+        // Last 3 Days Active - Last Visit DateTime within last 3 days
+        last3d: this.rawData.filter(u => {
+          const lastVisit = new Date(u['Last Visit DateTime']);
+          const daysDiff = (now - lastVisit) / (1000 * 60 * 60 * 24);
+          return daysDiff <= 3 && daysDiff >= 0;
+        }).length,
+        // Last 72h Active - Last Visit DateTime within last 72 hours
+        last72h: this.rawData.filter(u => {
+          const lastVisit = new Date(u['Last Visit DateTime']);
+          const hoursDiff = (now - lastVisit) / (1000 * 60 * 60);
+          return hoursDiff <= 72 && hoursDiff >= 0;
+        }).length,
+        // Last 24h Active - Last Visit DateTime within last 24 hours
+        last24h: this.rawData.filter(u => {
+          const lastVisit = new Date(u['Last Visit DateTime']);
+          const hoursDiff = (now - lastVisit) / (1000 * 60 * 60);
+          return hoursDiff <= 24 && hoursDiff >= 0;
+        }).length,
+        // Last 12h Active - Last Visit DateTime within last 12 hours
+        last12h: this.rawData.filter(u => {
+          const lastVisit = new Date(u['Last Visit DateTime']);
+          const hoursDiff = (now - lastVisit) / (1000 * 60 * 60);
+          return hoursDiff <= 12 && hoursDiff >= 0;
+        }).length,
+        // New Users (≤15d) - First Visit DateTime within last 15 days
+        new: this.rawData.filter(u => {
+          const firstVisit = new Date(u['First Visit DateTime']);
+          const daysDiff = (now - firstVisit) / (1000 * 60 * 60 * 24);
+          return daysDiff <= 15 && daysDiff >= 0;
+        }).length,
+        visits: this.rawData.reduce((sum, u) => sum + (parseInt(u['Total Visit Count']) || 0), 0)
+      };
+
+      Object.entries(kpis).forEach(([key, value]) => {
+        this.animateNumber(`k_${key}`, value);
+      });
+    }
+
+    updateUsersList() {
+      const container = document.getElementById('usersGrid');
+      const note = document.getElementById('usersNote');
+      
+      if (this.filteredData.length === 0) {
+        container.innerHTML = '<div class="text-center muted">No users found matching the current filters.</div>';
+        note.textContent = 'No users to display.';
+        return;
+      }
+
+      const usersHtml = this.filteredData.slice(0, 50).map(user => this.createUserCard(user)).join('');
+      container.innerHTML = usersHtml;
+      note.textContent = `Showing ${Math.min(this.filteredData.length, 50)} of ${this.filteredData.length} users`;
+    }
+
+    createUserCard(user) {
+      const status = this.getUserStatus(user);
+      const statusIcons = {
+        active: '🟣',
+        inactive: '🔴',
+        new: '🆕',
+        live: '🟢'
+      };
+      
+      const lastVisit = user['Last Visit DateTime'] ? new Date(user['Last Visit DateTime']).toLocaleDateString() : 'Never';
+      const firstVisit = user['First Visit DateTime'] ? new Date(user['First Visit DateTime']).toLocaleDateString() : 'Unknown';
+      const accountAge = user['Account Age (Days)'] || '0';
+      const timezone = user.Timezone || 'Unknown';
+      const deviceModel = user['Device Model / Name'] || 'Unknown';
+      
+      return `
+        <div class="user-card">
+          <div class="user-header">
+            <div class="user-id">${user['Unique User ID'] || 'Unknown'}</div>
+            <div class="user-status ${status}">
+              <span class="status-indicator ${status}"></span>
+              ${statusIcons[status]} ${status.charAt(0).toUpperCase() + status.slice(1)}
+            </div>
+          </div>
+          <div class="user-details">
+            <div class="user-detail">
+              <span class="label">First Visit:</span>
+              <span class="value">${firstVisit}</span>
+            </div>
+            <div class="user-detail">
+              <span class="label">Last Visit:</span>
+              <span class="value">${lastVisit}</span>
+            </div>
+            <div class="user-detail">
+              <span class="label">A/C Age:</span>
+              <span class="value">${accountAge} days</span>
+            </div>
+            <div class="user-detail">
+              <span class="label">IP Address:</span>
+              <span class="value">${user['IP Address'] || 'Unknown'}</span>
+            </div>
+            <div class="user-detail">
+              <span class="label">Location:</span>
+              <span class="value">${user.City || 'Unknown'}, ${user.Country || 'Unknown'}</span>
+            </div>
+            <div class="user-detail">
+              <span class="label">Timezone:</span>
+              <span class="value">${timezone}</span>
+            </div>
+            <div class="user-detail">
+              <span class="label">Device Model:</span>
+              <span class="value">${deviceModel}</span>
+            </div>
+            <div class="user-detail">
+              <span class="label">Total Visits:</span>
+              <span class="value">${user['Total Visit Count'] || '0'}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    updateCharts() {
+      this.updateActivenessChart();
+      this.updateGrowthChart();
+    }
+
+    updateActivenessChart() {
+      const canvas = document.getElementById('activenessChart');
+      const loading = document.getElementById('activenessLoading');
+      const lastUpdated = document.getElementById('activenessLastUpdated');
+      
+      if (!canvas) return;
+      
+      loading.classList.remove('hidden');
+      
+      // Get active period
+      const activePeriod = document.querySelector('.chart-toggle.active[data-period]')?.dataset.period || 'today';
+      const chartType = document.querySelector('.chart-type-btn.active[data-type]')?.dataset.type || 'bar';
+      
+      const data = this.getActivenessData(activePeriod);
+      
+      setTimeout(() => {
+        loading.classList.add('hidden');
+        
+        if (activenessChart) {
+          activenessChart.destroy();
+        }
+        
+        const ctx = canvas.getContext('2d');
+        activenessChart = new Chart(ctx, {
+          type: chartType,
+          data: {
+            labels: data.labels,
+            datasets: [{
+              label: 'Active Users',
+              data: data.values,
+              backgroundColor: data.colors,
+              borderColor: data.colors,
+              borderWidth: 2,
+              tension: chartType === 'line' ? 0.4 : 0
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: false
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                grid: {
+                  color: 'rgba(255, 255, 255, 0.1)'
+                },
+                ticks: {
+                  color: '#96a3c7'
+                }
+              },
+              x: {
+                grid: {
+                  color: 'rgba(255, 255, 255, 0.1)'
+                },
+                ticks: {
+                  color: '#96a3c7',
+                  maxRotation: 45
+                }
+              }
+            }
+          }
+        });
+        
+        lastUpdated.textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
+      }, 500);
+    }
+
+    updateGrowthChart() {
+      const canvas = document.getElementById('growthChart');
+      const loading = document.getElementById('growthLoading');
+      const lastUpdated = document.getElementById('growthLastUpdated');
+      
+      if (!canvas) return;
+      
+      loading.classList.remove('hidden');
+      
+      // Get active period
+      const activePeriod = document.querySelector('.chart-toggle.active[data-period]')?.dataset.period || 'today';
+      const chartType = document.querySelector('.chart-type-btn.active[data-type]')?.dataset.type || 'bar';
+      
+      const data = this.getGrowthData(activePeriod);
+      
+      setTimeout(() => {
+        loading.classList.add('hidden');
+        
+        if (growthChart) {
+          growthChart.destroy();
+        }
+        
+        const ctx = canvas.getContext('2d');
+        growthChart = new Chart(ctx, {
+          type: chartType,
+          data: {
+            labels: data.labels,
+            datasets: [{
+              label: 'New Users',
+              data: data.values,
+              backgroundColor: data.colors,
+              borderColor: data.colors,
+              borderWidth: 2,
+              tension: chartType === 'line' ? 0.4 : 0
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: false
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                grid: {
+                  color: 'rgba(255, 255, 255, 0.1)'
+                },
+                ticks: {
+                  color: '#96a3c7'
+                }
+              },
+              x: {
+                grid: {
+                  color: 'rgba(255, 255, 255, 0.1)'
+                },
+                ticks: {
+                  color: '#96a3c7',
+                  maxRotation: 45
+                }
+              }
+            }
+          }
+        });
+        
+        lastUpdated.textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
+      }, 500);
+    }
+
+    getActivenessData(period) {
+      const now = new Date();
+      const periods = this.getPeriods(period);
+      
+      const data = periods.map(p => {
+        const count = this.getActivenessCount(p);
+        return {
+          label: p.label,
+          value: count,
+          color: p.color
+        };
+      });
+      
+      return {
+        labels: data.map(d => d.label),
+        values: data.map(d => d.value),
+        colors: data.map(d => d.color)
+      };
+    }
+
+    getGrowthData(period) {
+      const now = new Date();
+      const periods = this.getPeriods(period);
+      
+      const data = periods.map(p => {
+        const count = this.getGrowthCount(p);
+        return {
+          label: p.label,
+          value: count,
+          color: p.color
+        };
+      });
+      
+      return {
+        labels: data.map(d => d.label),
+        values: data.map(d => d.value),
+        colors: data.map(d => d.color)
+      };
+    }
+
+    getPeriods(period) {
+      const now = new Date();
+      const colors = ['#6c8cff', '#1ec97f', '#ffcc66', '#ff5a78', '#37b5ff', '#8b5cf6', '#f59e0b', '#ef4444'];
+      
+      switch (period) {
+        case 'today':
+          return [
+            { label: 'Today', days: 1, color: colors[0] }
+          ];
+        case 'yesterday':
+          return [
+            { label: 'Yesterday', days: 2, color: colors[1] }
+          ];
+        case '3d':
+          return [
+            { label: 'Today', days: 1, color: colors[0] },
+            { label: 'Yesterday', days: 2, color: colors[1] },
+            { label: 'Day Before', days: 3, color: colors[2] }
+          ];
+        case '7d':
+          return Array.from({ length: 7 }, (_, i) => ({
+            label: `Day ${i + 1}`,
+            days: i + 1,
+            color: colors[i % colors.length]
+          }));
+        case '15d':
+          return Array.from({ length: 15 }, (_, i) => ({
+            label: `Day ${i + 1}`,
+            days: i + 1,
+            color: colors[i % colors.length]
+          }));
+        case '30d':
+          return Array.from({ length: 30 }, (_, i) => ({
+            label: `Day ${i + 1}`,
+            days: i + 1,
+            color: colors[i % colors.length]
+          }));
+        case '3m':
+          return Array.from({ length: 12 }, (_, i) => ({
+            label: `Week ${i + 1}`,
+            days: (i + 1) * 7,
+            color: colors[i % colors.length]
+          }));
+        case '6m':
+          return Array.from({ length: 24 }, (_, i) => ({
+            label: `Week ${i + 1}`,
+            days: (i + 1) * 7,
+            color: colors[i % colors.length]
+          }));
+        case '1y':
+          return Array.from({ length: 12 }, (_, i) => ({
+            label: `Month ${i + 1}`,
+            days: (i + 1) * 30,
+            color: colors[i % colors.length]
+          }));
+        default:
+          return [{ label: 'Today', days: 1, color: colors[0] }];
+      }
+    }
+
+    getActivenessCount(period) {
+      const now = new Date();
+      const cutoffDate = new Date(now.getTime() - period.days * 24 * 60 * 60 * 1000);
+      
+      return this.rawData.filter(user => {
+        const lastVisit = new Date(user['Last Visit DateTime']);
+        return lastVisit >= cutoffDate && lastVisit <= now;
+      }).length;
+    }
+
+    getGrowthCount(period) {
+      const now = new Date();
+      const cutoffDate = new Date(now.getTime() - period.days * 24 * 60 * 60 * 1000);
+      
+      return this.rawData.filter(user => {
+        const firstVisit = new Date(user['First Visit DateTime']);
+        return firstVisit >= cutoffDate && firstVisit <= now;
+      }).length;
+    }
+
+    animateNumber(elementId, targetValue) {
+      const element = document.getElementById(elementId);
+      if (!element) return;
+      
+      const currentValue = parseInt(element.textContent.replace(/[^\d]/g, '')) || 0;
+      const difference = targetValue - currentValue;
+      const duration = 1000;
+      const startTime = performance.now();
+      
+      const animate = (currentTime) => {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const easeOutCubic = 1 - Math.pow(1 - progress, 3);
+        const current = Math.round(currentValue + (difference * easeOutCubic));
+        
+        element.textContent = this.formatNumber(current);
+        
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        }
+      };
+      
+      requestAnimationFrame(animate);
+    }
+
+    formatNumber(num) {
+      if (num >= 1000000000) return (num / 1000000000).toFixed(1).replace(/\.0$/, '') + 'B';
+      if (num >= 1000000) return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+      if (num >= 1000) return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+      return num.toString();
+    }
+  }
+
+  // Initialize dashboard
+  const dashboard = new DashboardState();
+  
+  // DOM elements
+  const refreshBtn = document.getElementById('refreshBtn');
+  const refreshIcon = document.getElementById('refreshIcon');
+  const refreshText = document.getElementById('refreshText');
+  
+  // Event listeners
+  refreshBtn.addEventListener('click', () => {
+    fetchData();
+  });
+  
+  // Filter event listeners
+  const filterElements = document.querySelectorAll('.filters select, .filters input');
+  filterElements.forEach(element => {
+    element.addEventListener('change', debounce(() => {
+      dashboard.applyFilters();
+    }, CONFIG.DEBOUNCE_DELAY));
+    
+    element.addEventListener('input', debounce(() => {
+      dashboard.applyFilters();
+    }, CONFIG.DEBOUNCE_DELAY));
+  });
+  
+  // Apply Filters button
+  const applyFiltersBtn = document.getElementById('applyFiltersBtn');
+  applyFiltersBtn.addEventListener('click', () => {
+    dashboard.applyFilters();
+  });
+  
+  // Chart toggle listeners
+  document.querySelectorAll('.chart-toggle').forEach(toggle => {
+    toggle.addEventListener('click', () => {
+      // Remove active class from siblings
+      toggle.parentElement.querySelectorAll('.chart-toggle').forEach(t => t.classList.remove('active'));
+      // Add active class to clicked toggle
+      toggle.classList.add('active');
+      // Update charts
+      dashboard.updateCharts();
+    });
+  });
+  
+  // Chart type toggle listeners
+  document.querySelectorAll('.chart-type-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      // Remove active class from siblings
+      btn.parentElement.querySelectorAll('.chart-type-btn').forEach(t => t.classList.remove('active'));
+      // Add active class to clicked button
+      btn.classList.add('active');
+      // Update charts
+      dashboard.updateCharts();
+    });
+  });
+  
+  // Data fetching
+  async function fetchData() {
+    if (dashboard.isLoading) return;
+    
+    dashboard.isLoading = true;
+    refreshBtn.disabled = true;
+    refreshIcon.textContent = '⏳';
+    refreshText.textContent = 'Loading...';
+    
+    try {
+      const response = await fetch(CONFIG.APPS_SCRIPT_JSON_URL, {
+        cache: 'no-cache',
+        headers: { 'Accept': 'application/json' }
+      });
+      
+      if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      
+      let data;
+      try {
+        data = await response.json();
+      } catch (e) {
+        // Try CSV fallback
+        const csvResponse = await fetch(CONFIG.CSV_URL, { cache: 'no-cache' });
+        if (!csvResponse.ok) throw new Error('Both JSON and CSV failed');
+        
+        const csvText = await csvResponse.text();
+        data = parseCSV(csvText);
+      }
+      
+      // Handle different response formats
+      let rows = [];
+      if (Array.isArray(data)) {
+        rows = data;
+      } else if (data.rows && Array.isArray(data.rows)) {
+        rows = data.rows;
+      } else if (data.data && Array.isArray(data.data)) {
+        rows = data.data;
+      } else {
+        const arr = Object.values(data).find(v => Array.isArray(v));
+        if (arr) rows = arr;
+        else throw new Error('No valid data array found');
+      }
+      
+      dashboard.setData(rows);
+      populateFilterOptions(rows);
+      
+    } catch (error) {
+      console.error('Failed to fetch data:', error);
+      document.getElementById('usersNote').textContent = 'Failed to load data. Please try again.';
+    } finally {
+      dashboard.isLoading = false;
+      refreshBtn.disabled = false;
+      refreshIcon.textContent = '🔄';
+      refreshText.textContent = 'Refresh';
+    }
+  }
+  
+  // Populate filter options
+  function populateFilterOptions(data) {
+    const countries = [...new Set(data.map(u => u.Country).filter(Boolean))].sort();
+    const cities = [...new Set(data.map(u => u.City).filter(Boolean))].sort();
+    const ips = [...new Set(data.map(u => u['IP Address']).filter(Boolean))].sort();
+    const timezones = [...new Set(data.map(u => u.Timezone).filter(Boolean))].sort();
+    
+    populateSelect('f_country', countries);
+    populateSelect('f_city', cities);
+    populateSelect('f_ip', ips);
+    populateSelect('f_timezone', timezones);
+  }
+  
+  function populateSelect(selectId, options) {
+    const select = document.getElementById(selectId);
+    if (!select) return;
+    
+    // Keep the first option (All)
+    const firstOption = select.firstElementChild;
+    select.innerHTML = '';
+    select.appendChild(firstOption);
+    
+    options.forEach(option => {
+      const optionElement = document.createElement('option');
+      optionElement.value = option;
+      optionElement.textContent = option;
+      select.appendChild(optionElement);
+    });
+  }
+  
+  // CSV parsing
+  function parseCSV(text) {
+    const lines = text.split(/\r?\n/).filter(Boolean);
+    if (lines.length < 2) return [];
+    
+    const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+    const rows = [];
+    
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i];
+      const cols = parseCSVLine(line);
+      if (cols.length === 0) continue;
+      
+      const obj = {};
+      headers.forEach((h, idx) => {
+        obj[h] = cols[idx] !== undefined ? cols[idx].trim().replace(/^"|"$/g, '') : '';
+      });
+      rows.push(obj);
+    }
+    return rows;
+  }
+  
+  function parseCSVLine(line) {
+    const result = [];
+    let cur = '', inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQuotes && line[i+1] === '"') { cur += '"'; i++; continue; }
+        inQuotes = !inQuotes;
+        continue;
+      }
+      if (ch === ',' && !inQuotes) { result.push(cur); cur = ''; continue; }
+      cur += ch;
+    }
+    result.push(cur);
+    return result;
+  }
+  
+  // Utility functions
+  function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+      const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+      };
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+    };
+  }
+  
+  // Auto-refresh every 5 minutes
+  setInterval(() => {
+    if (!dashboard.isLoading) {
+      fetchData();
+    }
+  }, CONFIG.REFRESH_INTERVAL);
+  
+  // Initial load
+  fetchData();
+  
+  // Handle window resize
+  window.addEventListener('resize', debounce(() => {
+    if (activenessChart) activenessChart.resize();
+    if (growthChart) growthChart.resize();
+  }, 250));
+  
+})();
+</script>
+</body>
+</html>
